@@ -7,6 +7,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import PendingActionsIcon from '@mui/icons-material/PendingActions'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import SearchIcon from '@mui/icons-material/Search'
+import DoneAllIcon from '@mui/icons-material/DoneAll'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import Alert from '@mui/material/Alert'
@@ -14,6 +15,11 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import CircularProgress from '@mui/material/CircularProgress'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import IconButton from '@mui/material/IconButton'
@@ -82,6 +88,8 @@ export default function CalendarPage() {
   const [projectFilter, setProjectFilter] = useState('')
   const [keyword, setKeyword] = useState('')
   const [resolvingId, setResolvingId] = useState<number | null>(null)
+  const [confirmAll, setConfirmAll] = useState(false)
+  const [bulkResolving, setBulkResolving] = useState(false)
   const [toast, setToast] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
@@ -126,6 +134,7 @@ export default function CalendarPage() {
   const overdue = issues.filter(
     i => !isResolved(i) && i.due_date && toDateKey(new Date(i.due_date)) < todayKey
   ).length
+  const monthOpenIssues = monthIssues.filter(i => !isResolved(i))
   const dayIssues = byDay.get(selected) ?? []
 
   const shiftMonth = (delta: number) =>
@@ -157,6 +166,32 @@ export default function CalendarPage() {
     }
   }
 
+  // Resolve every open issue of the displayed month, one by one; failures don't stop the rest.
+  const resolveMonth = async () => {
+    setBulkResolving(true)
+    let done = 0
+    let failed = 0
+    let lastError = ''
+    for (const issue of monthOpenIssues) {
+      try {
+        await RequestServices.resolveRequest(issue.id)
+        done++
+      } catch (err) {
+        failed++
+        lastError = getErrorMessage(err)
+      }
+    }
+    setBulkResolving(false)
+    setConfirmAll(false)
+    setPopover(null)
+    setToast(
+      failed
+        ? { severity: 'error', text: `Đã giải quyết ${done}, thất bại ${failed}: ${lastError}` }
+        : { severity: 'success', text: `Đã giải quyết ${done} việc trong tháng ${view.month + 1}` }
+    )
+    refetch()
+  }
+
   const openIssue = (event: MouseEvent<HTMLElement>, issue: Issue) =>
     setPopover({ anchor: event.currentTarget, issue })
 
@@ -176,7 +211,7 @@ export default function CalendarPage() {
           )
         }
         onClick={() => resolve(issue)}
-        disabled={resolvingId !== null}
+        disabled={resolvingId !== null || bulkResolving}
       >
         Giải quyết
       </Button>
@@ -244,6 +279,16 @@ export default function CalendarPage() {
               <Typography variant="h6" sx={{ flexGrow: 1 }}>
                 Tháng {view.month + 1}, {view.year}
               </Typography>
+              <Button
+                size="small"
+                variant="outlined"
+                color="success"
+                startIcon={<DoneAllIcon />}
+                disabled={monthOpenIssues.length === 0 || loading}
+                onClick={() => setConfirmAll(true)}
+              >
+                Giải quyết cả tháng ({monthOpenIssues.length})
+              </Button>
               <Button size="small" variant="outlined" onClick={goToday}>
                 Hôm nay
               </Button>
@@ -417,6 +462,31 @@ export default function CalendarPage() {
           </Stack>
         )}
       </Popover>
+
+      <Dialog open={confirmAll} onClose={() => !bulkResolving && setConfirmAll(false)}>
+        <DialogTitle>Giải quyết tất cả việc trong tháng?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {monthOpenIssues.length} việc chưa xong của tháng {view.month + 1}/{view.year} sẽ được
+            chuyển sang trạng thái đã giải quyết
+            {(projectFilter || keyword.trim()) && ' (chỉ tính các việc đang được lọc)'}.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmAll(false)} disabled={bulkResolving}>
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={resolveMonth}
+            disabled={bulkResolving}
+            startIcon={bulkResolving ? <CircularProgress size={14} color="inherit" /> : <DoneAllIcon />}
+          >
+            Giải quyết tất cả
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={!!toast}

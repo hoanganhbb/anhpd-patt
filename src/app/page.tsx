@@ -5,6 +5,7 @@ import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import SearchIcon from '@mui/icons-material/Search'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -114,6 +115,9 @@ export default function IssueListPage() {
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
+            <Button startIcon={<UploadFileIcon />} component={Link} href="/issues/import">
+              Nhập Excel
+            </Button>
             <Button variant="contained" startIcon={<AddIcon />} component={Link} href="/issues/new">
               Tạo mới
             </Button>

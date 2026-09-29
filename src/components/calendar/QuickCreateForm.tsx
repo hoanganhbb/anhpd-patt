@@ -14,6 +14,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import CategorySelect from '@/components/CategorySelect'
 import PriorityBadge from '@/components/PriorityBadge'
 import ProjectSelect from '@/components/ProjectSelect'
+import { toLocalIso } from '@/lib/format'
 import { defaultCategory, findProjectById } from '@/lib/projects'
 import { getErrorMessage } from '@/services/httpService'
 import RequestServices from '@/services/requestServices'
@@ -25,15 +26,6 @@ interface Props {
   date: string
   onDateChange: (date: string) => void
   onCreated: (id?: number) => void
-}
-
-// "2026-09-30" -> "2026-09-30T00:00:00+07:00" in the browser's timezone.
-const toLocalIso = (dateKey: string) => {
-  const offset = -new Date(`${dateKey}T00:00:00`).getTimezoneOffset()
-  const sign = offset >= 0 ? '+' : '-'
-  const hh = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0')
-  const mm = String(Math.abs(offset) % 60).padStart(2, '0')
-  return `${dateKey}T00:00:00${sign}${hh}:${mm}`
 }
 
 export default function QuickCreateForm({ projects, me, date, onDateChange, onCreated }: Props) {

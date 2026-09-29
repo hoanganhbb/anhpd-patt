@@ -25,6 +25,7 @@ Vào **Quản trị API-KEY** (`/settings`) để nhập API-KEY, sau đó bấm
 | -------------- | ----------------------------------------------------------------------------------------------- |
 | `/`            | Danh sách công việc: lọc theo dự án, bộ lọc, trạng thái, tìm kiếm, phân trang                   |
 | `/issues/new`  | Tạo công việc                                                                                   |
+| `/issues/import` | Nhập hàng loạt từ Excel: tải template, kiểm tra từng dòng, tạo tối đa 500 công việc |
 | `/issues/[id]` | Chi tiết, cập nhật trạng thái/người xử lý/ưu tiên, ghi chú, tệp, theo dõi, ghim, nhắc việc, xoá |
 | `/api-test`    | Chạy thử từng API trong `RequestServices` với tham số JSON                                      |
 | `/settings`    | Quản trị API-KEY                                                                                |

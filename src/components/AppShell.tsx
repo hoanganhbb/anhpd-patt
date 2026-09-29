@@ -8,6 +8,7 @@ import DarkModeIcon from '@mui/icons-material/DarkModeOutlined'
 import KeyIcon from '@mui/icons-material/Key'
 import LightModeIcon from '@mui/icons-material/LightModeOutlined'
 import ListAltIcon from '@mui/icons-material/ListAlt'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 import MenuIcon from '@mui/icons-material/Menu'
 import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightnessOutlined'
 import AppBar from '@mui/material/AppBar'
@@ -42,7 +43,8 @@ const NAV_GROUPS = [
     items: [
       { href: '/', label: 'Danh sách công việc', icon: <ListAltIcon /> },
       { href: '/calendar', label: 'Lịch của tôi', icon: <CalendarMonthIcon /> },
-      { href: '/issues/new', label: 'Tạo công việc', icon: <AddTaskIcon /> }
+      { href: '/issues/new', label: 'Tạo công việc', icon: <AddTaskIcon /> },
+      { href: '/issues/import', label: 'Nhập từ Excel', icon: <UploadFileIcon /> }
     ]
   },
   {

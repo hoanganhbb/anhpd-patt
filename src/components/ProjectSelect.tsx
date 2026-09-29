@@ -7,15 +7,9 @@ import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
 import { useMemo } from 'react'
 
+import { flattenProjects, type ProjectOption } from '@/lib/projects'
 import { normalize } from '@/lib/text'
 import type { Project } from '@/services/types'
-
-interface Option {
-  id: string
-  name: string
-  depth: number
-  path: string
-}
 
 interface Props {
   projects: Project[]
@@ -29,16 +23,9 @@ interface Props {
   sx?: object
 }
 
-const flatten = (projects: Project[], depth = 0, parent = ''): Option[] =>
-  projects.flatMap(p => {
-    const path = parent ? `${parent} / ${p.name}` : p.name
-    return [
-      { id: String(p.id), name: p.name, depth, path },
-      ...flatten(p.subProjects ?? [], depth + 1, path)
-    ]
-  })
-
-const filter = createFilterOptions<Option>({ stringify: o => normalize(`${o.path} ${o.id}`) })
+const filter = createFilterOptions<ProjectOption>({
+  stringify: o => normalize(`${o.path} ${o.id}`)
+})
 
 export default function ProjectSelect({
   projects,
@@ -50,11 +37,7 @@ export default function ProjectSelect({
   clearable,
   sx
 }: Props) {
-  const options = useMemo(() => {
-    // Sub-projects may also be listed at top level; keep the first occurrence.
-    const seen = new Set<string>()
-    return flatten(projects).filter(o => !seen.has(o.id) && seen.add(o.id))
-  }, [projects])
+  const options = useMemo(() => flattenProjects(projects), [projects])
   const selected = options.find(o => o.id === value) ?? null
 
   return (

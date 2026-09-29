@@ -29,6 +29,28 @@ const findProject = (projects: Project[], id: string): Project | undefined => {
 
 export const findProjectById = findProject
 
+export interface ProjectOption {
+  id: string
+  name: string
+  depth: number
+  path: string
+}
+
+// Depth-first flat list ("Cha / Con" paths), keeping the first occurrence of each id since
+// sub-projects may also be listed at top level.
+export const flattenProjects = (projects: Project[]): ProjectOption[] => {
+  const seen = new Set<string>()
+  const walk = (list: Project[], depth: number, parent: string): ProjectOption[] =>
+    list.flatMap(p => {
+      const path = parent ? `${parent} / ${p.name}` : p.name
+      return [
+        { id: String(p.id), name: p.name, depth, path },
+        ...walk(p.subProjects ?? [], depth + 1, path)
+      ]
+    })
+  return walk(projects, 0, '').filter(o => !seen.has(o.id) && seen.add(o.id))
+}
+
 // The project itself plus all of its sub-projects (resolving nested stubs to their full entry).
 export const projectWithChildrenIds = (projects: Project[], id: string) => {
   const ids = new Set<string>()
