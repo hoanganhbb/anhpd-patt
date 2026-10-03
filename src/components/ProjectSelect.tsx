@@ -1,14 +1,18 @@
 'use client'
 
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
-import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
-import Box from '@mui/material/Box'
-import InputAdornment from '@mui/material/InputAdornment'
-import TextField from '@mui/material/TextField'
-import { useMemo } from 'react'
+import {
+  Combobox,
+  createListCollection,
+  InputGroup,
+  Portal,
+  type SystemStyleObject,
+  Text
+} from '@chakra-ui/react'
+import { useMemo, useState } from 'react'
+import { LuFolder } from 'react-icons/lu'
 
-import { flattenProjects, type ProjectOption } from '@/lib/projects'
-import { normalize } from '@/lib/text'
+import { flattenProjects } from '@/lib/projects'
+import { matchesText } from '@/lib/text'
 import type { Project } from '@/services/types'
 
 interface Props {
@@ -20,12 +24,8 @@ interface Props {
   required?: boolean
   // Allow clearing the value (e.g. "all projects" in a filter).
   clearable?: boolean
-  sx?: object
+  width?: SystemStyleObject['width']
 }
-
-const filter = createFilterOptions<ProjectOption>({
-  stringify: o => normalize(`${o.path} ${o.id}`)
-})
 
 export default function ProjectSelect({
   projects,
@@ -35,55 +35,77 @@ export default function ProjectSelect({
   placeholder = 'Tìm dự án…',
   required,
   clearable,
-  sx
+  width
 }: Props) {
   const options = useMemo(() => flattenProjects(projects), [projects])
-  const selected = options.find(o => o.id === value) ?? null
+  const selected = options.find(o => o.id === value)
+  // What the user is typing; null shows the selected project's path instead.
+  const [query, setQuery] = useState<string | null>(null)
+
+  const collection = useMemo(
+    () =>
+      createListCollection({
+        items: query ? options.filter(o => matchesText(`${o.path} ${o.id}`, query)) : options,
+        itemToString: o => o.path,
+        itemToValue: o => o.id
+      }),
+    [options, query]
+  )
 
   return (
-    <Autocomplete
-      options={options}
-      value={selected}
-      onChange={(_, option) => onChange(option?.id ?? '')}
-      getOptionLabel={o => o.path}
-      isOptionEqualToValue={(a, b) => a.id === b.id}
-      filterOptions={(opts, state) =>
-        filter(opts, { ...state, inputValue: normalize(state.inputValue) })
-      }
-      disableClearable={!clearable}
-      autoHighlight
-      noOptionsText="Không tìm thấy dự án"
-      sx={sx}
-      renderOption={({ key, ...props }, option) => (
-        <Box
-          component="li"
-          key={key}
-          {...props}
-          sx={{ pl: `${16 + option.depth * 16}px !important` }}
-        >
-          <FolderOutlinedIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-          {option.name}
-        </Box>
+    <Combobox.Root
+      collection={collection}
+      value={value ? [value] : []}
+      inputValue={query ?? selected?.path ?? ''}
+      onInputValueChange={e => setQuery(e.reason === 'input-change' ? e.inputValue : null)}
+      onValueChange={e => {
+        setQuery(null)
+        if (e.value[0] || clearable) onChange(e.value[0] ?? '')
+      }}
+      onOpenChange={e => !e.open && setQuery(null)}
+      openOnClick
+      required={required}
+      width={width}
+    >
+      {label && (
+        <Combobox.Label>
+          {label}
+          {required && (
+            <Text as="span" color="fg.error" aria-hidden>
+              *
+            </Text>
+          )}
+        </Combobox.Label>
       )}
-      renderInput={params => (
-        <TextField
-          {...params}
-          label={label}
-          placeholder={selected ? undefined : placeholder}
-          required={required}
-          slotProps={{
-            ...params.slotProps,
-            input: {
-              ...params.slotProps.input,
-              startAdornment: (
-                <InputAdornment position="start" sx={{ ml: 0.5 }}>
-                  <FolderOutlinedIcon fontSize="small" />
-                </InputAdornment>
-              )
-            }
-          }}
-        />
-      )}
-    />
+      <Combobox.Control>
+        <InputGroup startElement={<LuFolder />}>
+          <Combobox.Input placeholder={placeholder} bg="bg.panel" />
+        </InputGroup>
+        <Combobox.IndicatorGroup>
+          {clearable && <Combobox.ClearTrigger />}
+          <Combobox.Trigger />
+        </Combobox.IndicatorGroup>
+      </Combobox.Control>
+      <Portal>
+        <Combobox.Positioner>
+          <Combobox.Content maxHeight="320px">
+            <Combobox.Empty>Không tìm thấy dự án</Combobox.Empty>
+            {collection.items.map(option => (
+              <Combobox.Item
+                item={option}
+                key={option.id}
+                ps={`${12 + option.depth * 16}px`}
+                justifyContent="flex-start"
+                gap="2"
+              >
+                <LuFolder style={{ opacity: 0.6, flexShrink: 0 }} />
+                <Combobox.ItemText>{option.name}</Combobox.ItemText>
+                <Combobox.ItemIndicator ms="auto" />
+              </Combobox.Item>
+            ))}
+          </Combobox.Content>
+        </Combobox.Positioner>
+      </Portal>
+    </Combobox.Root>
   )
 }

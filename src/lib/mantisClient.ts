@@ -17,7 +17,8 @@ export const createMantisClient = async () => {
 
   return axios.create({
     baseURL: `${baseURL}/`,
-    timeout: 30000,
+    // Long enough for the 3000-issue report request.
+    timeout: 180000,
     headers: { Authorization: token },
     responseType: 'arraybuffer',
     validateStatus: () => true

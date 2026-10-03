@@ -1,9 +1,8 @@
-import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter'
-import InitColorSchemeScript from '@mui/material/InitColorSchemeScript'
 import type { Metadata } from 'next'
 import { Be_Vietnam_Pro } from 'next/font/google'
 
 import AppShell from '@/components/AppShell'
+import { Provider } from '@/components/ui/provider'
 
 const sans = Be_Vietnam_Pro({
   weight: ['400', '500', '600', '700'],
@@ -21,10 +20,9 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="vi" className={sans.variable} suppressHydrationWarning>
       <body>
-        <InitColorSchemeScript attribute="class" />
-        <AppRouterCacheProvider>
+        <Provider>
           <AppShell>{children}</AppShell>
-        </AppRouterCacheProvider>
+        </Provider>
       </body>
     </html>
   )

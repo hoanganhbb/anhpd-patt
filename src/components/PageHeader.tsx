@@ -1,6 +1,4 @@
-import Box from '@mui/material/Box'
-import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
+import { Box, Heading, HStack, Stack, Text } from '@chakra-ui/react'
 import type { ReactNode } from 'react'
 
 interface Props {
@@ -12,24 +10,32 @@ interface Props {
 export default function PageHeader({ title, subtitle, actions }: Props) {
   return (
     <Stack
-      direction={{ xs: 'column', sm: 'row' }}
-      spacing={2}
-      sx={{ alignItems: { sm: 'flex-end' }, justifyContent: 'space-between', mb: 3 }}
+      direction={{ base: 'column', sm: 'row' }}
+      gap="4"
+      align={{ sm: 'flex-end' }}
+      justify="space-between"
+      mb="8"
     >
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="h4" component="h1" sx={{ fontSize: { xs: 24, md: 30 } }}>
+      <Box minWidth="0">
+        <Heading
+          as="h1"
+          fontSize={{ base: '26px', md: '32px' }}
+          fontWeight="semibold"
+          letterSpacing="-0.025em"
+          lineHeight="1.15"
+        >
           {title}
-        </Typography>
+        </Heading>
         {subtitle && (
-          <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+          <Text color="fg.muted" mt="1.5">
             {subtitle}
-          </Typography>
+          </Text>
         )}
       </Box>
       {actions && (
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexShrink: 0 }}>
+        <HStack gap="2" flexShrink={0} wrap="wrap">
           {actions}
-        </Stack>
+        </HStack>
       )}
     </Stack>
   )

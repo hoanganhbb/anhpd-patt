@@ -1,35 +1,29 @@
 'use client'
 
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import DownloadIcon from '@mui/icons-material/Download'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
-import FileUploadIcon from '@mui/icons-material/FileUpload'
-import UploadFileIcon from '@mui/icons-material/UploadFile'
-import Alert from '@mui/material/Alert'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import Chip from '@mui/material/Chip'
-import CircularProgress from '@mui/material/CircularProgress'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Grid from '@mui/material/Grid'
-import LinearProgress from '@mui/material/LinearProgress'
-import Paper from '@mui/material/Paper'
-import Stack from '@mui/material/Stack'
-import Switch from '@mui/material/Switch'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import Typography from '@mui/material/Typography'
-import Link from 'next/link'
+import {
+  Badge,
+  Box,
+  Button,
+  Flex,
+  Grid,
+  GridItem,
+  HStack,
+  Progress,
+  Spinner,
+  Stack,
+  Switch,
+  Table,
+  Text
+} from '@chakra-ui/react'
+import NextLink from 'next/link'
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
+import { LuCircleAlert, LuCircleCheck, LuDownload, LuFileUp, LuUpload } from 'react-icons/lu'
 
 import PageHeader from '@/components/PageHeader'
 import ProjectSelect from '@/components/ProjectSelect'
+import { Alert } from '@/components/ui/alert'
+import { Panel } from '@/components/ui/panel'
+import { StepNumber } from '@/components/ui/step-number'
 import { toLocalIso } from '@/lib/format'
 import { MAX_ROWS } from '@/lib/importSchema'
 import type { ImportRow } from '@/lib/importParser'
@@ -216,165 +210,169 @@ export default function ImportIssuesPage() {
         title="Nhập công việc từ Excel"
         subtitle="Tải mẫu, điền nhiều công việc trong một tệp rồi nhập hàng loạt"
         actions={
-          <Button component={Link} href="/">
-            Về danh sách
+          <Button variant="ghost" asChild>
+            <NextLink href="/">Về danh sách</NextLink>
           </Button>
         }
       />
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert status="error" mb="4" onClose={() => setError('')}>
           {error}
         </Alert>
       )}
 
-      <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Stack spacing={2}>
-                <StepTitle n={1} title="Tải tệp mẫu" />
-                <Typography variant="body2" color="text.secondary">
-                  Mẫu có sẵn danh sách thả xuống (dự án, danh mục theo dự án, ưu tiên, người xử lý)
-                  đặt cùng sheet, bên phải bảng nhập.
-                </Typography>
-                <ProjectSelect
-                  clearable
-                  projects={projects}
-                  value={handlerProject}
-                  onChange={setHandlerProject}
-                  label="Lấy danh sách người xử lý từ dự án"
-                  placeholder="Không chọn (chỉ gồm tôi)"
-                />
-                <Button
-                  variant="contained"
-                  startIcon={
-                    downloading ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />
-                  }
-                  onClick={downloadTemplate}
-                  disabled={downloading || !projects.length}
-                >
-                  {downloading ? 'Đang tạo mẫu…' : 'Tải template (.xlsx)'}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Stack spacing={2} sx={{ height: '100%' }}>
-                <StepTitle n={2} title="Chọn tệp đã điền" />
-                <Box
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => fileInput.current?.click()}
-                  onKeyDown={e =>
-                    (e.key === 'Enter' || e.key === ' ') && fileInput.current?.click()
-                  }
-                  onDragOver={e => {
-                    e.preventDefault()
-                    setDragging(true)
-                  }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={onDrop}
-                  sx={{
-                    flexGrow: 1,
-                    minHeight: 150,
-                    display: 'grid',
-                    placeItems: 'center',
-                    textAlign: 'center',
-                    p: 3,
-                    cursor: 'pointer',
-                    borderRadius: 2,
-                    border: '2px dashed',
-                    borderColor: dragging ? 'primary.main' : 'divider',
-                    bgcolor: t =>
-                      dragging ? t.alpha((t.vars || t).palette.primary.main, 0.08) : 'action.hover',
-                    transition: 'all .15s'
-                  }}
-                >
-                  <Stack spacing={0.5} sx={{ alignItems: 'center' }}>
-                    {parsing ? (
-                      <CircularProgress size={32} />
-                    ) : (
-                      <UploadFileIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-                    )}
-                    <Typography sx={{ fontWeight: 600 }}>
-                      {parsing ? 'Đang đọc tệp…' : fileName || 'Kéo thả tệp .xlsx vào đây'}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      hoặc bấm để chọn tệp · tối đa {MAX_ROWS} dòng
-                    </Typography>
-                  </Stack>
-                  <input ref={fileInput} type="file" accept=".xlsx" hidden onChange={onPick} />
-                </Box>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
+      <Grid templateColumns={{ base: '1fr', md: '5fr 7fr' }} gap="5" mb="5">
+        <GridItem minWidth="0">
+          <Panel icon={<StepNumber n={1} />} title="Tải tệp mẫu" height="100%">
+            <Stack gap="4">
+              <Text textStyle="sm" color="fg.muted">
+                Mẫu có sẵn danh sách thả xuống (dự án, danh mục theo dự án, ưu tiên, người xử lý)
+                đặt cùng sheet, bên phải bảng nhập.
+              </Text>
+              <ProjectSelect
+                clearable
+                projects={projects}
+                value={handlerProject}
+                onChange={setHandlerProject}
+                label="Lấy danh sách người xử lý từ dự án"
+                placeholder="Không chọn (chỉ gồm tôi)"
+              />
+              <Button
+                onClick={downloadTemplate}
+                loading={downloading}
+                loadingText="Đang tạo mẫu…"
+                disabled={!projects.length}
+              >
+                <LuDownload /> Tải template (.xlsx)
+              </Button>
+            </Stack>
+          </Panel>
+        </GridItem>
+        <GridItem minWidth="0">
+          <Panel icon={<StepNumber n={2} />} title="Chọn tệp đã điền" height="100%">
+            <Stack gap="4" height="100%">
+              <Flex
+                role="button"
+                tabIndex={0}
+                onClick={() => fileInput.current?.click()}
+                onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && fileInput.current?.click()}
+                onDragOver={e => {
+                  e.preventDefault()
+                  setDragging(true)
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+                flexGrow={1}
+                minHeight="150px"
+                align="center"
+                justify="center"
+                textAlign="center"
+                p="6"
+                cursor="pointer"
+                borderRadius="lg"
+                borderWidth="2px"
+                borderStyle="dashed"
+                borderColor={dragging ? 'brand.solid' : 'border'}
+                bg={dragging ? 'brand.subtle' : 'bg.muted'}
+                transition="all .15s"
+                focusRingStyle="outside"
+              >
+                <Stack gap="1" align="center">
+                  {parsing ? (
+                    <Spinner size="lg" color="brand.solid" />
+                  ) : (
+                    <Box color="brand.fg">
+                      <LuFileUp size={40} />
+                    </Box>
+                  )}
+                  <Text fontWeight="semibold">
+                    {parsing ? 'Đang đọc tệp…' : fileName || 'Kéo thả tệp .xlsx vào đây'}
+                  </Text>
+                  <Text textStyle="xs" color="fg.muted">
+                    hoặc bấm để chọn tệp · tối đa {MAX_ROWS} dòng
+                  </Text>
+                </Stack>
+                <input ref={fileInput} type="file" accept=".xlsx" hidden onChange={onPick} />
+              </Flex>
+            </Stack>
+          </Panel>
+        </GridItem>
       </Grid>
 
       {rows.length > 0 && (
-        <Paper variant="outlined" sx={{ borderRadius: 3.5, overflow: 'hidden' }}>
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={1.5}
-            sx={{ p: 2, alignItems: { md: 'center' }, justifyContent: 'space-between' }}
-          >
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}
-            >
-              <StepTitle n={3} title="Kiểm tra & nhập" />
-              <Chip label={`${rows.length} dòng`} />
-              <Chip color="success" variant="outlined" label={`${valid.length} hợp lệ`} />
-              {invalid > 0 && <Chip color="error" variant="outlined" label={`${invalid} lỗi`} />}
-              {failedCount > 0 && <Chip color="error" label={`${failedCount} tạo thất bại`} />}
-            </Stack>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <FormControlLabel
-                control={
-                  <Switch checked={onlyErrors} onChange={e => setOnlyErrors(e.target.checked)} />
-                }
-                label="Chỉ hiện dòng lỗi"
-              />
-              <Button onClick={reset} disabled={importing}>
+        <Panel
+          icon={<StepNumber n={3} />}
+          title="Kiểm tra & nhập"
+          overflow="hidden"
+          bodyProps={{ p: '0' }}
+          actions={
+            <>
+              <Switch.Root
+                checked={onlyErrors}
+                onCheckedChange={e => setOnlyErrors(e.checked)}
+                me="2"
+              >
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label>Chỉ hiện dòng lỗi</Switch.Label>
+              </Switch.Root>
+              <Button variant="ghost" onClick={reset} disabled={importing}>
                 Chọn tệp khác
               </Button>
               {importing ? (
-                <Button color="error" variant="outlined" onClick={() => (cancelled.current = true)}>
+                <Button
+                  variant="outline"
+                  colorPalette="red"
+                  onClick={() => (cancelled.current = true)}
+                >
                   Dừng
                 </Button>
               ) : (
-                <Button
-                  variant="contained"
-                  startIcon={<FileUploadIcon />}
-                  disabled={!pending.length}
-                  onClick={runImport}
-                >
+                <Button disabled={!pending.length} onClick={runImport}>
+                  <LuUpload />
                   {doneCount
                     ? `Nhập lại ${pending.length} dòng`
                     : `Nhập ${pending.length} công việc`}
                 </Button>
               )}
-            </Stack>
-          </Stack>
+            </>
+          }
+        >
+          <HStack gap="2" wrap="wrap" px="6" pb="4">
+            <Badge size="lg" variant="subtle" colorPalette="gray">
+              {rows.length} dòng
+            </Badge>
+            <Badge size="lg" variant="outline" colorPalette="green">
+              {valid.length} hợp lệ
+            </Badge>
+            {invalid > 0 && (
+              <Badge size="lg" variant="outline" colorPalette="red">
+                {invalid} lỗi
+              </Badge>
+            )}
+            {failedCount > 0 && (
+              <Badge size="lg" variant="solid" colorPalette="red">
+                {failedCount} tạo thất bại
+              </Badge>
+            )}
+          </HStack>
 
           {invalid > 0 && !importing && !doneCount && (
-            <Alert severity="warning" sx={{ mx: 2, mb: 2 }}>
+            <Alert status="warning" mx="6" mb="4" width="auto">
               {invalid} dòng có lỗi sẽ bị bỏ qua. Sửa trong Excel rồi chọn lại tệp, hoặc nhập trước{' '}
               {valid.length} dòng hợp lệ.
             </Alert>
           )}
           {allDone && !importing && (
             <Alert
-              severity="success"
-              sx={{ mx: 2, mb: 2 }}
+              status="success"
+              mx="6"
+              mb="4"
+              width="auto"
               action={
-                <Button color="inherit" size="small" component={Link} href="/">
-                  Xem danh sách
+                <Button size="xs" variant="outline" colorPalette="green" asChild>
+                  <NextLink href="/">Xem danh sách</NextLink>
                 </Button>
               }
             >
@@ -382,57 +380,38 @@ export default function ImportIssuesPage() {
             </Alert>
           )}
 
-          <LinearProgress
-            variant="determinate"
+          <Progress.Root
             value={progress}
-            sx={{ visibility: importing || doneCount ? 'visible' : 'hidden', borderRadius: 0 }}
-          />
-          <TableContainer sx={{ maxHeight: 640 }}>
-            <Table stickyHeader size="small" sx={{ minWidth: 1000 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ width: 70 }}>Dòng</TableCell>
-                  <TableCell sx={{ width: 150 }}>Kết quả</TableCell>
-                  <TableCell>Tiêu đề</TableCell>
-                  <TableCell sx={{ width: 240 }}>Dự án / Danh mục</TableCell>
-                  <TableCell sx={{ width: 120 }}>Ưu tiên</TableCell>
-                  <TableCell sx={{ width: 170 }}>Người xử lý</TableCell>
-                  <TableCell sx={{ width: 110 }}>Hạn</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
+            size="xs"
+            visibility={importing || doneCount ? 'visible' : 'hidden'}
+          >
+            <Progress.Track borderRadius="0">
+              <Progress.Range />
+            </Progress.Track>
+          </Progress.Root>
+          <Table.ScrollArea maxHeight="640px">
+            <Table.Root stickyHeader size="sm" interactive minWidth="1000px">
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeader width="70px">Dòng</Table.ColumnHeader>
+                  <Table.ColumnHeader width="150px">Kết quả</Table.ColumnHeader>
+                  <Table.ColumnHeader>Tiêu đề</Table.ColumnHeader>
+                  <Table.ColumnHeader width="240px">Dự án / Danh mục</Table.ColumnHeader>
+                  <Table.ColumnHeader width="120px">Ưu tiên</Table.ColumnHeader>
+                  <Table.ColumnHeader width="170px">Người xử lý</Table.ColumnHeader>
+                  <Table.ColumnHeader width="110px">Hạn</Table.ColumnHeader>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {visible.map(row => (
                   <PreviewRow key={row.raw.row} row={row} outcome={outcomes[row.raw.row]} />
                 ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
+              </Table.Body>
+            </Table.Root>
+          </Table.ScrollArea>
+        </Panel>
       )}
     </>
-  )
-}
-
-function StepTitle({ n, title }: { n: number; title: string }) {
-  return (
-    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-      <Box
-        sx={{
-          width: 26,
-          height: 26,
-          borderRadius: '50%',
-          display: 'grid',
-          placeItems: 'center',
-          fontSize: 13,
-          fontWeight: 700,
-          color: 'primary.contrastText',
-          bgcolor: 'primary.main'
-        }}
-      >
-        {n}
-      </Box>
-      <Typography variant="subtitle1">{title}</Typography>
-    </Stack>
   )
 }
 
@@ -441,49 +420,49 @@ function PreviewRow({ row, outcome }: { row: ImportRow; outcome?: Outcome }) {
   const problems = failed ? [failed] : row.errors
   const dueDate = row.payload?.due_date?.slice(0, 10) ?? row.raw.dueDate
   return (
-    <TableRow
-      hover
-      sx={{
-        verticalAlign: 'top',
-        opacity: outcome?.state === 'done' ? 0.65 : 1,
-        '&:last-child td': { borderBottom: 0 }
-      }}
+    <Table.Row
+      bg="bg.panel"
+      verticalAlign="top"
+      opacity={outcome?.state === 'done' ? 0.65 : 1}
+      css={{ '&:last-child td': { borderBottomWidth: 0 } }}
     >
-      <TableCell sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{row.raw.row}</TableCell>
-      <TableCell>
+      <Table.Cell fontFamily="mono" color="fg.muted">
+        {row.raw.row}
+      </Table.Cell>
+      <Table.Cell>
         <RowStatus row={row} outcome={outcome} />
-      </TableCell>
-      <TableCell sx={{ maxWidth: 420 }}>
-        <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-word' }}>
+      </Table.Cell>
+      <Table.Cell maxWidth="420px">
+        <Text textStyle="sm" fontWeight="semibold" wordBreak="break-word">
           {row.raw.summary || <em>(trống)</em>}
-        </Typography>
+        </Text>
         {problems.map(p => (
-          <Typography key={p} variant="caption" color="error" component="div">
+          <Text key={p} textStyle="xs" color="red.fg">
             • {p}
-          </Typography>
+          </Text>
         ))}
         {row.warnings.map(w => (
-          <Typography key={w} variant="caption" color="warning.main" component="div">
+          <Text key={w} textStyle="xs" color="orange.fg">
             • {w}
-          </Typography>
+          </Text>
         ))}
-      </TableCell>
-      <TableCell>
-        <Typography variant="body2">{row.projectPath || '—'}</Typography>
-        <Typography variant="caption" color="text.secondary" component="div">
+      </Table.Cell>
+      <Table.Cell>
+        <Text textStyle="sm">{row.projectPath || '—'}</Text>
+        <Text textStyle="xs" color="fg.muted">
           {row.category}
-        </Typography>
-      </TableCell>
-      <TableCell>{row.priorityLabel || 'Bình thường'}</TableCell>
-      <TableCell>
+        </Text>
+      </Table.Cell>
+      <Table.Cell>{row.priorityLabel || 'Bình thường'}</Table.Cell>
+      <Table.Cell>
         {row.handlerLabel || (
-          <Typography variant="body2" color="text.disabled">
+          <Text textStyle="sm" color="fg.subtle">
             Chưa giao
-          </Typography>
+          </Text>
         )}
-      </TableCell>
-      <TableCell>{dueDate ? formatKey(dueDate) : ''}</TableCell>
-    </TableRow>
+      </Table.Cell>
+      <Table.Cell>{dueDate ? formatKey(dueDate) : ''}</Table.Cell>
+    </Table.Row>
   )
 }
 
@@ -491,41 +470,46 @@ function PreviewRow({ row, outcome }: { row: ImportRow; outcome?: Outcome }) {
 const formatKey = (key: string) => key.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1')
 
 function RowStatus({ row, outcome }: { row: ImportRow; outcome?: Outcome }) {
-  if (outcome?.state === 'running') return <Chip size="small" label="Đang tạo…" />
-  if (outcome?.state === 'done') {
+  if (outcome?.state === 'running') {
     return (
-      <Chip
-        size="small"
-        color="success"
-        icon={<CheckCircleIcon />}
-        label={outcome.id ? `Đã tạo #${outcome.id}` : 'Đã tạo'}
-        component={outcome.id ? Link : 'div'}
-        {...(outcome.id
-          ? { href: `/issues/${outcome.id}`, clickable: true, target: '_blank' }
-          : {})}
-      />
+      <Badge colorPalette="gray">
+        <Spinner size="xs" /> Đang tạo…
+      </Badge>
+    )
+  }
+  if (outcome?.state === 'done') {
+    if (!outcome.id) {
+      return (
+        <Badge colorPalette="green" variant="solid">
+          <LuCircleCheck /> Đã tạo
+        </Badge>
+      )
+    }
+    return (
+      <Badge colorPalette="green" variant="solid" asChild>
+        <NextLink href={`/issues/${outcome.id}`} target="_blank">
+          <LuCircleCheck /> Đã tạo #{outcome.id}
+        </NextLink>
+      </Badge>
     )
   }
   if (outcome?.state === 'failed') {
-    return <Chip size="small" color="error" icon={<ErrorOutlineIcon />} label="Tạo thất bại" />
+    return (
+      <Badge colorPalette="red" variant="solid">
+        <LuCircleAlert /> Tạo thất bại
+      </Badge>
+    )
   }
   if (!row.payload) {
     return (
-      <Chip
-        size="small"
-        color="error"
-        variant="outlined"
-        icon={<ErrorOutlineIcon />}
-        label="Lỗi dữ liệu"
-      />
+      <Badge colorPalette="red" variant="outline">
+        <LuCircleAlert /> Lỗi dữ liệu
+      </Badge>
     )
   }
   return (
-    <Chip
-      size="small"
-      color={row.warnings.length ? 'warning' : 'success'}
-      variant="outlined"
-      label={row.warnings.length ? 'Hợp lệ (lưu ý)' : 'Sẵn sàng'}
-    />
+    <Badge colorPalette={row.warnings.length ? 'orange' : 'green'} variant="outline">
+      {row.warnings.length ? 'Hợp lệ (lưu ý)' : 'Sẵn sàng'}
+    </Badge>
   )
 }

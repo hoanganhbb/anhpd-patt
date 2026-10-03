@@ -1,24 +1,26 @@
 'use client'
 
-import AddTaskIcon from '@mui/icons-material/AddTask'
-import BoltIcon from '@mui/icons-material/Bolt'
-import Alert from '@mui/material/Alert'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import MenuItem from '@mui/material/MenuItem'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
+import { Button, Input, Stack, Textarea } from '@chakra-ui/react'
 import { useMemo, useState, type FormEvent } from 'react'
+import { LuListPlus } from 'react-icons/lu'
 
 import CategorySelect from '@/components/CategorySelect'
 import PriorityBadge from '@/components/PriorityBadge'
 import ProjectSelect from '@/components/ProjectSelect'
+import { Alert } from '@/components/ui/alert'
+import { Field } from '@/components/ui/field'
+import { SelectField } from '@/components/ui/select-field'
 import { toLocalIso } from '@/lib/format'
 import { defaultCategory, findProjectById } from '@/lib/projects'
 import { getErrorMessage } from '@/services/httpService'
 import RequestServices from '@/services/requestServices'
 import { PRIORITIES, type CurrentUser, type Project } from '@/services/types'
+
+const PRIORITY_OPTIONS = PRIORITIES.map(p => ({
+  value: p.name,
+  label: p.label ?? p.name,
+  render: <PriorityBadge priority={p} />
+}))
 
 interface Props {
   projects: Project[]
@@ -71,52 +73,27 @@ export default function QuickCreateForm({ projects, me, date, onDateChange, onCr
   }
 
   return (
-    <Stack component="form" onSubmit={submit} spacing={2}>
-      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-        <Box
-          sx={{
-            width: 32,
-            height: 32,
-            borderRadius: 2,
-            display: 'grid',
-            placeItems: 'center',
-            color: 'primary.main',
-            bgcolor: t => t.alpha((t.vars || t).palette.primary.main, 0.12)
-          }}
-        >
-          <BoltIcon fontSize="small" />
-        </Box>
-        <Box>
-          <Typography variant="subtitle1" sx={{ lineHeight: 1.2 }}>
-            Tạo việc nhanh
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Giao cho {me ? me.real_name || me.name : '…'}
-          </Typography>
-        </Box>
-      </Stack>
-      <TextField
-        required
-        label="Tiêu đề"
-        value={summary}
-        onChange={e => setSummary(e.target.value)}
-      />
-      <TextField
-        label="Mô tả"
-        value={description}
-        onChange={e => setDescription(e.target.value)}
-        multiline
-        minRows={2}
-      />
-      <TextField
-        required
-
-        type="date"
-        label="Hạn xử lý"
-        value={date}
-        onChange={e => onDateChange(e.target.value)}
-        slotProps={{ inputLabel: { shrink: true } }}
-      />
+    <Stack as="form" onSubmit={submit} gap="4">
+      <Field label="Tiêu đề" required>
+        <Input bg="bg.panel" value={summary} onChange={e => setSummary(e.target.value)} />
+      </Field>
+      <Field label="Mô tả">
+        <Textarea
+          bg="bg.panel"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          rows={2}
+          autoresize
+        />
+      </Field>
+      <Field label="Hạn xử lý" required>
+        <Input
+          bg="bg.panel"
+          type="date"
+          value={date}
+          onChange={e => onDateChange(e.target.value)}
+        />
+      </Field>
       <ProjectSelect
         required
         projects={projects}
@@ -126,30 +103,23 @@ export default function QuickCreateForm({ projects, me, date, onDateChange, onCr
           setCategory('')
         }}
       />
-      <Stack direction={{ xs: 'column', sm: 'row', lg: 'column' }} spacing={2}>
+      <Stack direction={{ base: 'column', sm: 'row', lg: 'column' }} gap="4">
         <CategorySelect categories={categories} value={effectiveCategory} onChange={setCategory} />
-        <TextField
-          select
+        <SelectField
           label="Ưu tiên"
+          options={PRIORITY_OPTIONS}
           value={priority}
-          onChange={e => setPriority(e.target.value)}
-          fullWidth
-        >
-          {PRIORITIES.map(p => (
-            <MenuItem key={p.id} value={p.name}>
-              <PriorityBadge priority={p} />
-            </MenuItem>
-          ))}
-        </TextField>
+          onChange={setPriority}
+        />
       </Stack>
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && <Alert status="error">{error}</Alert>}
       <Button
         type="submit"
-        variant="contained"
-        startIcon={<AddTaskIcon />}
-        disabled={submitting || !summary.trim() || !effectiveProjectId}
+        loading={submitting}
+        loadingText="Đang tạo…"
+        disabled={!summary.trim() || !effectiveProjectId}
       >
-        {submitting ? 'Đang tạo…' : 'Tạo việc'}
+        <LuListPlus /> Tạo việc
       </Button>
     </Stack>
   )

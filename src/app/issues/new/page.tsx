@@ -1,29 +1,30 @@
 'use client'
 
-import SendIcon from '@mui/icons-material/Send'
-import Alert from '@mui/material/Alert'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import Grid from '@mui/material/Grid'
-import MenuItem from '@mui/material/MenuItem'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
+import { Box, Button, Grid, GridItem, Input, Stack, Textarea } from '@chakra-ui/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { LuFileText, LuSend, LuTags } from 'react-icons/lu'
 
 import CategorySelect from '@/components/CategorySelect'
 import PageHeader from '@/components/PageHeader'
 import PriorityBadge from '@/components/PriorityBadge'
 import ProjectSelect from '@/components/ProjectSelect'
+import { Alert } from '@/components/ui/alert'
+import { Field } from '@/components/ui/field'
+import { Panel } from '@/components/ui/panel'
+import { SelectField } from '@/components/ui/select-field'
 import UserAvatar from '@/components/UserAvatar'
 import { defaultCategory, findProjectById } from '@/lib/projects'
 import { getErrorMessage } from '@/services/httpService'
 import { toUserOptions, type UserOption } from '@/services/normalize'
 import RequestServices from '@/services/requestServices'
 import { PRIORITIES, type Project } from '@/services/types'
+
+const PRIORITY_OPTIONS = PRIORITIES.map(p => ({
+  value: p.name,
+  label: p.label ?? p.name,
+  render: <PriorityBadge priority={p} />
+}))
 
 export default function NewIssuePage() {
   const router = useRouter()
@@ -83,114 +84,101 @@ export default function NewIssuePage() {
     }
   }
 
+  const handlerOptions = [
+    { value: '', label: '(Chưa giao)' },
+    ...handlers.map(h => ({
+      value: String(h.id),
+      label: h.label,
+      render: (
+        <>
+          <UserAvatar name={h.label} size={22} />
+          <span>{h.label}</span>
+        </>
+      )
+    }))
+  ]
+
   return (
-    <Box component="form" onSubmit={submit}>
+    <Box as="form" onSubmit={submit}>
       <PageHeader
         title="Tạo công việc"
         subtitle="Mô tả rõ yêu cầu để người xử lý nắm được ngay"
         actions={
           <>
-            <Button onClick={() => router.back()}>Huỷ</Button>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={<SendIcon />}
-              disabled={submitting}
-            >
-              {submitting ? 'Đang gửi…' : 'Tạo công việc'}
+            <Button variant="ghost" onClick={() => router.back()}>
+              Huỷ
+            </Button>
+            <Button type="submit" loading={submitting} loadingText="Đang gửi…">
+              <LuSend /> Tạo công việc
             </Button>
           </>
         }
       />
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert status="error" mb="4">
           {error}
         </Alert>
       )}
-      <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Stack spacing={2.5}>
-                <Typography variant="subtitle1">Nội dung</Typography>
-                <TextField
-                  required
-                  label="Tiêu đề"
+      <Grid templateColumns={{ base: '1fr', md: '2fr 1fr' }} gap="5">
+        <GridItem minWidth="0">
+          <Panel icon={<LuFileText />} title="Nội dung">
+            <Stack gap="5">
+              <Field label="Tiêu đề" required>
+                <Input
+                  bg="bg.panel"
                   placeholder="VD: Lỗi không đăng nhập được trên ứng dụng"
                   value={form.summary}
                   onChange={set('summary')}
-                  fullWidth
                 />
-                <TextField
-                  required
-                  label="Mô tả"
+              </Field>
+              <Field label="Mô tả" required>
+                <Textarea
+                  bg="bg.panel"
                   placeholder="Mô tả chi tiết, các bước tái hiện, kết quả mong muốn…"
                   value={form.description}
                   onChange={set('description')}
-                  multiline
-                  minRows={8}
-                  fullWidth
+                  rows={8}
+                  autoresize
                 />
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Stack spacing={2.5}>
-                <Typography variant="subtitle1">Phân loại</Typography>
-                <ProjectSelect
-                  required
-                  projects={projects}
-                  value={form.projectId}
-                  onChange={id =>
-                    setForm(f => ({ ...f, projectId: id, category: '', handlerId: '' }))
-                  }
-                />
-                <CategorySelect
-                  categories={categories}
-                  value={category}
-                  onChange={name => setForm(f => ({ ...f, category: name }))}
-                />
-                <TextField
-                  select
-                  label="Mức ưu tiên"
-                  value={form.priority}
-                  onChange={set('priority')}
-                  fullWidth
-                >
-                  {PRIORITIES.map(p => (
-                    <MenuItem key={p.id} value={p.name}>
-                      <PriorityBadge priority={p} />
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
-                  label="Người xử lý"
-                  value={form.handlerId}
-                  onChange={set('handlerId')}
-                  disabled={!handlers.length}
-                  helperText={
-                    form.projectId && !handlers.length ? 'Dự án chưa có người xử lý' : ' '
-                  }
-                  fullWidth
-                >
-                  <MenuItem value="">(Chưa giao)</MenuItem>
-                  {handlers.map(h => (
-                    <MenuItem key={h.id} value={String(h.id)}>
-                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                        <UserAvatar name={h.label} size={22} />
-                        <span>{h.label}</span>
-                      </Stack>
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
+              </Field>
+            </Stack>
+          </Panel>
+        </GridItem>
+        <GridItem minWidth="0">
+          <Panel icon={<LuTags />} title="Phân loại">
+            <Stack gap="5">
+              <ProjectSelect
+                required
+                projects={projects}
+                value={form.projectId}
+                onChange={id =>
+                  setForm(f => ({ ...f, projectId: id, category: '', handlerId: '' }))
+                }
+              />
+              <CategorySelect
+                categories={categories}
+                value={category}
+                onChange={name => setForm(f => ({ ...f, category: name }))}
+              />
+              <SelectField
+                label="Mức ưu tiên"
+                options={PRIORITY_OPTIONS}
+                value={form.priority}
+                onChange={priority => setForm(f => ({ ...f, priority }))}
+              />
+              <SelectField
+                label="Người xử lý"
+                options={handlerOptions}
+                value={form.handlerId}
+                onChange={handlerId => setForm(f => ({ ...f, handlerId }))}
+                disabled={!handlers.length}
+                helperText={
+                  form.projectId && !handlers.length ? 'Dự án chưa có người xử lý' : undefined
+                }
+              />
+            </Stack>
+          </Panel>
+        </GridItem>
       </Grid>
     </Box>
   )

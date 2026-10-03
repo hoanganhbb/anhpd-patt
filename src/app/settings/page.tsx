@@ -1,24 +1,32 @@
 'use client'
 
-import DeleteIcon from '@mui/icons-material/Delete'
-import SaveIcon from '@mui/icons-material/Save'
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser'
-import Visibility from '@mui/icons-material/Visibility'
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
-import Alert from '@mui/material/Alert'
-import Button from '@mui/material/Button'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import Chip from '@mui/material/Chip'
-import IconButton from '@mui/material/IconButton'
-import InputAdornment from '@mui/material/InputAdornment'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
+import {
+  Badge,
+  Button,
+  Code,
+  HStack,
+  IconButton,
+  Input,
+  InputGroup,
+  Stack,
+  Text
+} from '@chakra-ui/react'
 import axios from 'axios'
 import { useEffect, useState } from 'react'
+import {
+  LuEye,
+  LuEyeOff,
+  LuKeyRound,
+  LuPlug,
+  LuSave,
+  LuShieldCheck,
+  LuTrash2
+} from 'react-icons/lu'
 
 import PageHeader from '@/components/PageHeader'
+import { Alert } from '@/components/ui/alert'
+import { Field } from '@/components/ui/field'
+import { Panel } from '@/components/ui/panel'
 import { getErrorMessage } from '@/services/httpService'
 
 interface TokenInfo {
@@ -28,7 +36,7 @@ interface TokenInfo {
   tokenFile: string
 }
 
-type Feedback = { severity: 'success' | 'error' | 'info'; text: string } | null
+type Feedback = { status: 'success' | 'error' | 'info'; text: string } | null
 
 export default function SettingsPage() {
   const [info, setInfo] = useState<TokenInfo | null>(null)
@@ -50,7 +58,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchInfo()
       .then(applyInfo)
-      .catch(err => setFeedback({ severity: 'error', text: getErrorMessage(err) }))
+      .catch(err => setFeedback({ status: 'error', text: getErrorMessage(err) }))
   }, [])
 
   const run = async (action: () => Promise<Feedback>) => {
@@ -59,7 +67,7 @@ export default function SettingsPage() {
     try {
       setFeedback(await action())
     } catch (err) {
-      setFeedback({ severity: 'error', text: getErrorMessage(err) })
+      setFeedback({ status: 'error', text: getErrorMessage(err) })
     } finally {
       setBusy(false)
     }
@@ -70,7 +78,7 @@ export default function SettingsPage() {
       const { data } = await axios.put<TokenInfo>('/api/token', { token })
       setInfo(data)
       setToken('')
-      return { severity: 'success', text: 'Đã ghi vào file txt' }
+      return { status: 'success', text: 'Đã ghi vào file txt' }
     })
 
   const reveal = () =>
@@ -83,7 +91,7 @@ export default function SettingsPage() {
       const data = await load(true)
       setToken(data.token)
       setShowToken(true)
-      return { severity: 'info', text: 'Đã đọc API-KEY từ file. Có thể sửa rồi bấm Lưu.' }
+      return { status: 'info', text: 'Đã đọc API-KEY từ file. Có thể sửa rồi bấm Lưu.' }
     })
 
   const remove = () =>
@@ -92,7 +100,7 @@ export default function SettingsPage() {
       const { data } = await axios.delete<TokenInfo>('/api/token')
       setInfo(data)
       setToken('')
-      return { severity: 'success', text: 'Đã xoá API-KEY' }
+      return { status: 'success', text: 'Đã xoá API-KEY' }
     })
 
   const verify = () =>
@@ -101,98 +109,101 @@ export default function SettingsPage() {
       if (data.ok) {
         const user = data.data?.real_name || data.data?.name || ''
         return {
-          severity: 'success',
+          status: 'success',
           text: `API-KEY hợp lệ${user ? ` — người dùng: ${user}` : ''}`
         }
       }
       return {
-        severity: 'error',
+        status: 'error',
         text: `API-KEY không hợp lệ (HTTP ${data.status}) ${data.message ?? JSON.stringify(data.data ?? '')}`
       }
     })
 
   return (
-    <Stack spacing={3} sx={{ maxWidth: 760 }}>
+    <Stack gap="6" maxWidth="760px">
       <PageHeader
         title="Quản trị API-KEY"
         subtitle="Khoá truy cập MantisBT được lưu ở máy chủ, không gửi xuống trình duyệt"
       />
 
-      <Card variant="outlined">
-        <CardContent>
-          <Stack spacing={1}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Typography variant="subtitle2">Trạng thái:</Typography>
-              {info?.hasToken ? (
-                <Chip color="success" size="small" label={`Đã có API-KEY (${info.token})`} />
-              ) : (
-                <Chip color="warning" size="small" label="Chưa có API-KEY" />
-              )}
-            </Stack>
-            <Typography variant="body2" color="text.secondary">
-              File API-KEY: <code>{info?.tokenFile}</code>
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Máy chủ (MANTIS_BASE_URL):{' '}
-              {info?.baseUrl ? <code>{info.baseUrl}</code> : <b>chưa cấu hình trong .env.local</b>}
-            </Typography>
-          </Stack>
-        </CardContent>
-      </Card>
+      <Panel icon={<LuPlug />} title="Kết nối MantisBT">
+        <Stack gap="2">
+          <HStack gap="2">
+            <Text textStyle="sm" fontWeight="semibold">
+              Trạng thái:
+            </Text>
+            {info?.hasToken ? (
+              <Badge colorPalette="green" variant="solid">
+                Đã có API-KEY ({info.token})
+              </Badge>
+            ) : (
+              <Badge colorPalette="orange" variant="solid">
+                Chưa có API-KEY
+              </Badge>
+            )}
+          </HStack>
+          <Text textStyle="sm" color="fg.muted">
+            File API-KEY: <Code>{info?.tokenFile}</Code>
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            Máy chủ (MANTIS_BASE_URL):{' '}
+            {info?.baseUrl ? <Code>{info.baseUrl}</Code> : <b>chưa cấu hình trong .env.local</b>}
+          </Text>
+        </Stack>
+      </Panel>
 
-      <TextField
-        label="API-KEY"
-        placeholder={info?.hasToken ? 'Nhập API-KEY mới để thay thế' : 'Dán API-KEY vào đây'}
-        value={token}
-        onChange={e => setToken(e.target.value)}
-        type={showToken ? 'text' : 'password'}
-        autoComplete="off"
-        fullWidth
-        slotProps={{
-          input: {
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={reveal}
-                  aria-label="Đọc API-KEY từ file"
-                  disabled={!info?.hasToken}
-                >
-                  {showToken ? <VisibilityOff /> : <Visibility />}
-                </IconButton>
-              </InputAdornment>
-            )
-          }
-        }}
-      />
+      <Panel
+        icon={<LuKeyRound />}
+        title="API-KEY"
+        description="Dán khoá mới rồi bấm Lưu, hoặc kiểm tra khoá hiện có"
+        bodyProps={{ gap: '4' }}
+      >
+        <Field label="API-KEY">
+          <InputGroup
+            endElement={
+              <IconButton
+                size="xs"
+                variant="ghost"
+                colorPalette="gray"
+                me="-2"
+                onClick={reveal}
+                aria-label="Đọc API-KEY từ file"
+                disabled={!info?.hasToken}
+              >
+                {showToken ? <LuEyeOff /> : <LuEye />}
+              </IconButton>
+            }
+          >
+            <Input
+              bg="bg.panel"
+              placeholder={info?.hasToken ? 'Nhập API-KEY mới để thay thế' : 'Dán API-KEY vào đây'}
+              value={token}
+              onChange={e => setToken(e.target.value)}
+              type={showToken ? 'text' : 'password'}
+              autoComplete="off"
+            />
+          </InputGroup>
+        </Field>
 
-      <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
-        <Button
-          variant="contained"
-          startIcon={<SaveIcon />}
-          onClick={save}
-          disabled={busy || !token.trim()}
-        >
-          Lưu
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<VerifiedUserIcon />}
-          onClick={verify}
-          disabled={busy}
-        >
-          Kiểm tra API-KEY
-        </Button>
-        <Button
-          color="error"
-          startIcon={<DeleteIcon />}
-          onClick={remove}
-          disabled={busy || !info?.hasToken}
-        >
-          Xoá API-KEY
-        </Button>
-      </Stack>
+        <HStack gap="2" wrap="wrap">
+          <Button onClick={save} disabled={busy || !token.trim()}>
+            <LuSave /> Lưu
+          </Button>
+          <Button variant="outline" onClick={verify} disabled={busy}>
+            <LuShieldCheck /> Kiểm tra API-KEY
+          </Button>
+          <Button
+            variant="ghost"
+            colorPalette="red"
+            onClick={remove}
+            disabled={busy || !info?.hasToken}
+          >
+            <LuTrash2 /> Xoá API-KEY
+          </Button>
+        </HStack>
 
-      {feedback && <Alert severity={feedback.severity}>{feedback.text}</Alert>}
+        {feedback && <Alert status={feedback.status}>{feedback.text}</Alert>}
+      </Panel>
     </Stack>
   )
 }

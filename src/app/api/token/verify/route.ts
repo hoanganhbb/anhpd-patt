@@ -5,7 +5,7 @@ export async function POST() {
   try {
     const client = await createMantisClient()
     const res = await client.get<ArrayBuffer>('api/rest/users/me')
-    console.log(res);
+    console.log(res)
     const text = Buffer.from(res.data).toString('utf8')
     let data: unknown = text
     try {

@@ -1,20 +1,13 @@
 'use client'
 
-import PlayArrowIcon from '@mui/icons-material/PlayArrow'
-import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay'
-import Accordion from '@mui/material/Accordion'
-import AccordionDetails from '@mui/material/AccordionDetails'
-import AccordionSummary from '@mui/material/AccordionSummary'
-import Alert from '@mui/material/Alert'
-import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
+import { Accordion, Badge, Box, Button, HStack, Stack, Text, Textarea } from '@chakra-ui/react'
 import axios from 'axios'
 import { useState } from 'react'
+import { LuListVideo, LuPlay } from 'react-icons/lu'
 
 import PageHeader from '@/components/PageHeader'
+import { Alert } from '@/components/ui/alert'
+import { Field } from '@/components/ui/field'
 import { API_CATALOG, callApi, type ApiEntry, type ApiKind } from '@/services/apiCatalog'
 import RequestServices from '@/services/requestServices'
 
@@ -25,10 +18,10 @@ interface Result {
   body: unknown
 }
 
-const KIND_CHIP: Record<ApiKind, { label: string; color: 'success' | 'warning' | 'error' }> = {
-  read: { label: 'đọc', color: 'success' },
-  write: { label: 'ghi', color: 'warning' },
-  danger: { label: 'nguy hiểm', color: 'error' }
+const KIND_CHIP: Record<ApiKind, { label: string; color: string; button: string }> = {
+  read: { label: 'đọc', color: 'green', button: 'brand' },
+  write: { label: 'ghi', color: 'orange', button: 'orange' },
+  danger: { label: 'nguy hiểm', color: 'red', button: 'red' }
 }
 
 const pretty = (value: unknown) => {
@@ -73,106 +66,94 @@ export default function ApiTestPage() {
   const passed = Object.values(results).filter(r => r.ok).length
 
   return (
-    <Stack spacing={2}>
+    <Stack gap="4">
       <PageHeader
         title="Kiểm thử API"
         subtitle="Gọi thử từng phương thức của RequestServices qua proxy"
         actions={
-          <Button
-            variant="contained"
-            startIcon={<PlaylistPlayIcon />}
-            onClick={runAllReads}
-            disabled={!!running}
-          >
-            Chạy tất cả API đọc
+          <Button onClick={runAllReads} disabled={!!running}>
+            <LuListVideo /> Chạy tất cả API đọc
           </Button>
         }
       />
-      <Alert severity="info">
+      <Alert status="info">
         Tham số nhập dạng JSON: số (id) hoặc object. API <b>ghi</b>/<b>nguy hiểm</b> thay đổi dữ
         liệu thật, chỉ chạy từng cái. Đã chạy {Object.keys(results).length}, thành công {passed}.
       </Alert>
-      <div>
+      <Accordion.Root multiple collapsible variant="enclosed" bg="bg.panel">
         {API_CATALOG.map(entry => {
           const result = results[entry.name]
+          const kind = KIND_CHIP[entry.kind]
           return (
-            <Accordion key={entry.name} variant="outlined" disableGutters>
-              <AccordionSummary>
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Chip size="small" {...KIND_CHIP[entry.kind]} />
-                  <Typography sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+            <Accordion.Item key={entry.name} value={entry.name}>
+              <Accordion.ItemTrigger cursor="pointer">
+                <HStack as="span" gap="2" wrap="wrap" flex="1">
+                  <Badge colorPalette={kind.color} variant="solid">
+                    {kind.label}
+                  </Badge>
+                  <Text as="span" fontFamily="mono" fontWeight="semibold">
                     {entry.name}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ fontFamily: 'monospace' }}
-                  >
+                  </Text>
+                  <Text as="span" textStyle="sm" color="fg.muted" fontFamily="mono">
                     {entry.method} {entry.path}
-                  </Typography>
+                  </Text>
                   {result && (
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      color={result.ok ? 'success' : 'error'}
-                      label={`${result.status ?? 'ERR'} · ${result.ms}ms`}
-                    />
+                    <Badge colorPalette={result.ok ? 'green' : 'red'} variant="outline">
+                      {result.status ?? 'ERR'} · {result.ms}ms
+                    </Badge>
                   )}
-                </Stack>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Stack spacing={1}>
-                  <TextField
-                    label="Tham số (JSON)"
-                    value={params[entry.name]}
-                    onChange={e => setParams(p => ({ ...p, [entry.name]: e.target.value }))}
-                    multiline
-                    minRows={1}
-                    slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontSize: 13 } } }}
-                  />
-                  <Button
-                    variant="outlined"
-                    color={
-                      entry.kind === 'read'
-                        ? 'primary'
-                        : entry.kind === 'write'
-                          ? 'warning'
-                          : 'error'
-                    }
-                    startIcon={<PlayArrowIcon />}
-                    onClick={() => {
-                      if (
-                        entry.kind !== 'read' &&
-                        !window.confirm(`Chạy ${entry.name}? API này thay đổi dữ liệu thật.`)
-                      )
-                        return
-                      run(entry)
-                    }}
-                    disabled={!!running}
-                    sx={{ alignSelf: 'start' }}
-                  >
-                    {running === entry.name ? 'Đang chạy…' : 'Chạy'}
-                  </Button>
-                  {result && (
-                    <pre
-                      style={{
-                        margin: 0,
-                        fontSize: 12,
-                        maxHeight: 400,
-                        overflow: 'auto',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-all'
+                </HStack>
+                <Accordion.ItemIndicator />
+              </Accordion.ItemTrigger>
+              <Accordion.ItemContent>
+                <Accordion.ItemBody>
+                  <Stack gap="2">
+                    <Field label="Tham số (JSON)">
+                      <Textarea
+                        value={params[entry.name]}
+                        onChange={e => setParams(p => ({ ...p, [entry.name]: e.target.value }))}
+                        autoresize
+                        rows={1}
+                        fontFamily="mono"
+                        fontSize="13px"
+                      />
+                    </Field>
+                    <Button
+                      variant="outline"
+                      colorPalette={kind.button}
+                      onClick={() => {
+                        if (
+                          entry.kind !== 'read' &&
+                          !window.confirm(`Chạy ${entry.name}? API này thay đổi dữ liệu thật.`)
+                        )
+                          return
+                        run(entry)
                       }}
+                      disabled={!!running}
+                      alignSelf="start"
                     >
-                      {pretty(result.body)}
-                    </pre>
-                  )}
-                </Stack>
-              </AccordionDetails>
-            </Accordion>
+                      <LuPlay /> {running === entry.name ? 'Đang chạy…' : 'Chạy'}
+                    </Button>
+                    {result && (
+                      <Box
+                        as="pre"
+                        m="0"
+                        fontSize="12px"
+                        maxHeight="400px"
+                        overflow="auto"
+                        whiteSpace="pre-wrap"
+                        wordBreak="break-all"
+                      >
+                        {pretty(result.body)}
+                      </Box>
+                    )}
+                  </Stack>
+                </Accordion.ItemBody>
+              </Accordion.ItemContent>
+            </Accordion.Item>
           )
         })}
-      </div>
+      </Accordion.Root>
     </Stack>
   )
 }

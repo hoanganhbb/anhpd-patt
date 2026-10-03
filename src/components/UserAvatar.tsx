@@ -1,15 +1,15 @@
-import Avatar from '@mui/material/Avatar'
+import { Avatar } from '@chakra-ui/react'
 
 // Stable colour per name so the same person always gets the same avatar.
 const COLORS = [
-  '#5b5bd6',
-  '#0ea5a4',
-  '#e5484d',
-  '#f59e0b',
-  '#16a34a',
-  '#0b8ae6',
-  '#d6409f',
-  '#8e4ec6'
+  '#1a9b8c',
+  '#c8763a',
+  '#c2577a',
+  '#5f7fb8',
+  '#7d6bb3',
+  '#5a9a5f',
+  '#b0893a',
+  '#6b7f88'
 ]
 
 const initials = (name: string) =>
@@ -24,17 +24,17 @@ export default function UserAvatar({ name, size = 28 }: { name?: string; size?: 
   const label = name?.trim() || '?'
   const hash = [...label].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
   return (
-    <Avatar
+    <Avatar.Root
       title={name}
-      sx={{
-        width: size,
-        height: size,
-        fontSize: size * 0.4,
-        fontWeight: 600,
-        bgcolor: name ? COLORS[hash % COLORS.length] : 'action.disabled'
-      }}
+      width={`${size}px`}
+      height={`${size}px`}
+      flexShrink={0}
+      color="white"
+      bg={name ? COLORS[hash % COLORS.length] : 'gray.400'}
     >
-      {name ? initials(label) : '?'}
-    </Avatar>
+      <Avatar.Fallback fontSize={`${size * 0.4}px`} fontWeight="semibold">
+        {name ? initials(label) : '?'}
+      </Avatar.Fallback>
+    </Avatar.Root>
   )
 }

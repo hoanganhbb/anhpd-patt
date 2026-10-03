@@ -23,6 +23,13 @@ export const API_CATALOG: ApiEntry[] = [
     sample: { page_size: 10, page: 1 }
   },
   {
+    name: 'getListRequestForReport',
+    kind: 'read',
+    method: 'GET',
+    path: 'api/rest/issues?{query}',
+    sample: { page_size: 3000, page: 1 }
+  },
+  {
     name: 'getListRequestByType',
     kind: 'read',
     method: 'GET',
@@ -132,6 +139,13 @@ export const API_CATALOG: ApiEntry[] = [
     method: 'POST',
     path: 'api/rest/issues/{id}/notes',
     sample: { id: 1, data: { text: 'Ghi chú kiểm thử', view_state: { name: 'public' } } }
+  },
+  {
+    name: 'addFilesRequest',
+    kind: 'write',
+    method: 'POST',
+    path: 'api/rest/issues/{id}/files',
+    sample: { id: 1, files: [{ name: 'test.txt', content: 'SGVsbG8=' }] }
   },
   {
     name: 'addMonitorRequest',

@@ -3,6 +3,8 @@ import queryString from 'query-string'
 import DataService, { type HttpService } from './httpService'
 import type { CurrentUser, Issue, IssueListResponse, Project } from './types'
 
+export const REPORT_TIMEOUT = 180000
+
 type Params = Record<string, string | number | boolean | undefined | null>
 
 export class RequestServices {
@@ -11,6 +13,12 @@ export class RequestServices {
   getListRequest = (params: Params) => {
     const query = queryString.stringify(params)
     return this.http.get<IssueListResponse>(`api/rest/issues?${query}`)
+  }
+
+  // Large page (e.g. 3000 issues for the reports page): Mantis can take minutes to answer.
+  getListRequestForReport = (params: Params) => {
+    const query = queryString.stringify(params)
+    return this.http.get<IssueListResponse>(`api/rest/issues?${query}`, { timeout: REPORT_TIMEOUT })
   }
 
   getListRequestByType = (params: Params) => {
@@ -72,6 +80,10 @@ export class RequestServices {
     })
 
   addRemindRequest = (params: unknown) => this.http.post('api/rest/permission/remind_issue', params)
+
+  // files: [{ name, content (base64) }]
+  addFilesRequest = (params: { id: number | string; files: { name: string; content: string }[] }) =>
+    this.http.post(`api/rest/issues/${params.id}/files`, { files: params.files })
 
   addNoteRequest = (params: { id: number | string; data: unknown }) =>
     this.http.post(`api/rest/issues/${params.id}/notes`, params.data, {

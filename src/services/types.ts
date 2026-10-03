@@ -23,7 +23,41 @@ export interface Attachment {
   size: number
   content_type?: string
   created_at?: string
+  reporter?: Ref
 }
+
+// One entry of an issue's change log.
+export interface HistoryEntry {
+  created_at: string
+  user?: Ref
+  type?: { id: number; name: string }
+  field?: { name: string; label?: string }
+  old_value?: Partial<Ref>
+  new_value?: Partial<Ref>
+  file?: { id: number; filename: string }
+  message?: string
+  change?: string
+}
+
+// What the current user may do on an issue (api/rest/permission/:id).
+export type IssuePermission = Partial<
+  Record<
+    | 'can_update'
+    | 'can_assign'
+    | 'can_change_status'
+    | 'can_monitor'
+    | 'can_unmonitor'
+    | 'can_sticky'
+    | 'can_unsticky'
+    | 'can_close'
+    | 'can_reopen'
+    | 'can_move'
+    | 'can_delete'
+    | 'can_clone'
+    | 'can_remind',
+    boolean
+  >
+>
 
 export interface Issue {
   id: number
@@ -39,7 +73,11 @@ export interface Issue {
   resolution?: Ref
   priority?: Ref
   severity?: Ref
+  reproducibility?: Ref
+  view_state?: Ref
   due_date?: string
+  date_start?: string
+  date_end?: string
   sticky?: boolean
   created_at?: string
   updated_at?: string
@@ -47,6 +85,7 @@ export interface Issue {
   attachments?: Attachment[]
   monitors?: Ref[]
   tags?: Ref[]
+  history?: HistoryEntry[]
 }
 
 export interface IssueListResponse {
@@ -59,6 +98,7 @@ export interface CurrentUser {
   name: string
   real_name?: string
   email?: string
+  access_level?: Ref
 }
 
 export interface Project {

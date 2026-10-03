@@ -1,6 +1,6 @@
 # Phiếu công việc
 
-Ứng dụng quản trị danh sách công việc (MantisBT REST API) — Next.js 16 (App Router, Turbopack), MUI 9, axios, Vitest, ESLint 10, Prettier.
+Ứng dụng quản trị danh sách công việc (MantisBT REST API) — Next.js 16 (App Router, Turbopack), Chakra UI 3, axios, Vitest, ESLint 10, Prettier.
 
 ## Chạy
 
@@ -21,14 +21,15 @@ Vào **Quản trị API-KEY** (`/settings`) để nhập API-KEY, sau đó bấm
 
 ## Chức năng
 
-| Trang          | Nội dung                                                                                        |
-| -------------- | ----------------------------------------------------------------------------------------------- |
-| `/`            | Danh sách công việc: lọc theo dự án, bộ lọc, trạng thái, tìm kiếm, phân trang                   |
-| `/issues/new`  | Tạo công việc                                                                                   |
-| `/issues/import` | Nhập hàng loạt từ Excel: tải template, kiểm tra từng dòng, tạo tối đa 500 công việc |
-| `/issues/[id]` | Chi tiết, cập nhật trạng thái/người xử lý/ưu tiên, ghi chú, tệp, theo dõi, ghim, nhắc việc, xoá |
-| `/api-test`    | Chạy thử từng API trong `RequestServices` với tham số JSON                                      |
-| `/settings`    | Quản trị API-KEY                                                                                |
+| Trang            | Nội dung                                                                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| `/`              | Danh sách công việc: lọc theo dự án, bộ lọc, trạng thái, tìm kiếm, phân trang                   |
+| `/reports`       | Thống kê: lấy 3000 phiếu (`page_size=3000`), biểu đồ theo người xử lý và theo phòng (dự án)     |
+| `/issues/new`    | Tạo công việc                                                                                   |
+| `/issues/import` | Nhập hàng loạt từ Excel: tải template, kiểm tra từng dòng, tạo tối đa 500 công việc             |
+| `/issues/[id]`   | Chi tiết, cập nhật trạng thái/người xử lý/ưu tiên, ghi chú, tệp, theo dõi, ghim, nhắc việc, xoá |
+| `/api-test`      | Chạy thử từng API trong `RequestServices` với tham số JSON                                      |
+| `/settings`      | Quản trị API-KEY                                                                                |
 
 ## Scripts
 

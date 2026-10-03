@@ -1,47 +1,53 @@
 'use client'
 
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import EventNoteIcon from '@mui/icons-material/EventNote'
-import OpenInNewIcon from '@mui/icons-material/OpenInNew'
-import PendingActionsIcon from '@mui/icons-material/PendingActions'
-import RefreshIcon from '@mui/icons-material/Refresh'
-import SearchIcon from '@mui/icons-material/Search'
-import DoneAllIcon from '@mui/icons-material/DoneAll'
-import TaskAltIcon from '@mui/icons-material/TaskAlt'
-import WarningAmberIcon from '@mui/icons-material/WarningAmber'
-import Alert from '@mui/material/Alert'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
-import CircularProgress from '@mui/material/CircularProgress'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogContentText from '@mui/material/DialogContentText'
-import DialogTitle from '@mui/material/DialogTitle'
-import Divider from '@mui/material/Divider'
-import Grid from '@mui/material/Grid'
-import IconButton from '@mui/material/IconButton'
-import InputAdornment from '@mui/material/InputAdornment'
-import LinearProgress from '@mui/material/LinearProgress'
-import Link from '@mui/material/Link'
-import Paper from '@mui/material/Paper'
-import Popover from '@mui/material/Popover'
-import Snackbar from '@mui/material/Snackbar'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import Tooltip from '@mui/material/Tooltip'
-import Typography from '@mui/material/Typography'
+import {
+  Badge,
+  Box,
+  Button,
+  CloseButton,
+  Dialog,
+  Grid,
+  GridItem,
+  HStack,
+  IconButton,
+  Input,
+  InputGroup,
+  Link,
+  Popover,
+  Portal,
+  Separator,
+  Spinner,
+  Stack,
+  StackSeparator,
+  Text
+} from '@chakra-ui/react'
 import NextLink from 'next/link'
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import {
+  LuCalendarClock,
+  LuCalendarDays,
+  LuCheckCheck,
+  LuChevronLeft,
+  LuChevronRight,
+  LuListChecks,
+  LuZap,
+  LuCircleCheckBig,
+  LuExternalLink,
+  LuSearch,
+  LuTriangleAlert
+} from 'react-icons/lu'
 
 import MonthCalendar from '@/components/calendar/MonthCalendar'
 import QuickCreateForm from '@/components/calendar/QuickCreateForm'
+import ApiErrorAlert from '@/components/ApiErrorAlert'
+import LoadingBar from '@/components/LoadingBar'
 import PageHeader from '@/components/PageHeader'
+import RefreshButton from '@/components/RefreshButton'
 import ProjectSelect from '@/components/ProjectSelect'
 import StatCard from '@/components/StatCard'
 import StatusChip, { statusColor } from '@/components/StatusChip'
+import { Panel } from '@/components/ui/panel'
+import { notify } from '@/components/ui/toaster'
 import { projectWithChildrenIds } from '@/lib/projects'
 import { matchesText } from '@/lib/text'
 import { groupByDay, isResolved, toDateKey } from '@/lib/calendar'
@@ -90,7 +96,6 @@ export default function CalendarPage() {
   const [resolvingId, setResolvingId] = useState<number | null>(null)
   const [confirmAll, setConfirmAll] = useState(false)
   const [bulkResolving, setBulkResolving] = useState(false)
-  const [toast, setToast] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     RequestServices.getCurrentUser()
@@ -156,11 +161,11 @@ export default function CalendarPage() {
     setResolvingId(issue.id)
     try {
       await RequestServices.resolveRequest(issue.id)
-      setToast({ severity: 'success', text: `Đã giải quyết #${issue.id}` })
+      notify('success', `Đã giải quyết #${issue.id}`)
       setPopover(null)
       refetch()
     } catch (err) {
-      setToast({ severity: 'error', text: getErrorMessage(err) })
+      notify('error', getErrorMessage(err))
     } finally {
       setResolvingId(null)
     }
@@ -184,11 +189,8 @@ export default function CalendarPage() {
     setBulkResolving(false)
     setConfirmAll(false)
     setPopover(null)
-    setToast(
-      failed
-        ? { severity: 'error', text: `Đã giải quyết ${done}, thất bại ${failed}: ${lastError}` }
-        : { severity: 'success', text: `Đã giải quyết ${done} việc trong tháng ${view.month + 1}` }
-    )
+    if (failed) notify('error', `Đã giải quyết ${done}, thất bại ${failed}: ${lastError}`)
+    else notify('success', `Đã giải quyết ${done} việc trong tháng ${view.month + 1}`)
     refetch()
   }
 
@@ -197,109 +199,102 @@ export default function CalendarPage() {
 
   const renderResolve = (issue: Issue) =>
     isResolved(issue) ? (
-      <Chip size="small" color="success" variant="outlined" label="Đã giải quyết" />
+      <Badge colorPalette="green" variant="outline">
+        Đã giải quyết
+      </Badge>
     ) : (
       <Button
-        size="small"
-        variant="outlined"
-        color="success"
-        startIcon={
-          resolvingId === issue.id ? (
-            <CircularProgress size={14} color="inherit" />
-          ) : (
-            <TaskAltIcon />
-          )
-        }
+        size="xs"
+        variant="outline"
+        colorPalette="green"
         onClick={() => resolve(issue)}
         disabled={resolvingId !== null || bulkResolving}
       >
+        {resolvingId === issue.id ? <Spinner size="xs" /> : <LuCircleCheckBig />}
         Giải quyết
       </Button>
     )
 
   return (
-    <Stack spacing={2.5}>
+    <Stack gap="5">
       <PageHeader
         title="Lịch của tôi"
         subtitle="Các việc được giao cho bạn, sắp xếp theo hạn xử lý"
-        actions={
-          <Tooltip title="Tải lại">
-            <IconButton onClick={refetch} aria-label="Tải lại">
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-        }
+        actions={<RefreshButton onClick={refetch} />}
       />
 
-      {(setupError || result?.error) && (
-        <Alert
-          severity="error"
-          action={
-            <Button color="inherit" size="small" component={NextLink} href="/settings">
-              API-KEY
-            </Button>
-          }
-        >
-          {result?.error || setupError}
-        </Alert>
-      )}
+      <ApiErrorAlert error={result?.error || setupError} />
 
-      <Grid container spacing={2}>
-        {[
-          {
-            label: 'Việc trong tháng',
-            value: monthIssues.length,
-            icon: <EventNoteIcon />,
-            color: 'primary' as const
-          },
-          {
-            label: 'Chưa xong',
-            value: monthOpen,
-            icon: <PendingActionsIcon />,
-            color: 'info' as const
-          },
-          {
-            label: 'Đã giải quyết',
-            value: monthIssues.length - monthOpen,
-            icon: <TaskAltIcon />,
-            color: 'success' as const
-          },
-          { label: 'Quá hạn', value: overdue, icon: <WarningAmberIcon />, color: 'error' as const }
-        ].map(stat => (
-          <Grid key={stat.label} size={{ xs: 6, md: 3 }}>
-            <StatCard {...stat} />
-          </Grid>
+      <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap="4">
+        {(
+          [
+            {
+              label: 'Việc trong tháng',
+              value: monthIssues.length,
+              icon: <LuCalendarDays />,
+              colorPalette: 'brand'
+            },
+            {
+              label: 'Chưa xong',
+              value: monthOpen,
+              icon: <LuCalendarClock />,
+              colorPalette: 'blue'
+            },
+            {
+              label: 'Đã giải quyết',
+              value: monthIssues.length - monthOpen,
+              icon: <LuCircleCheckBig />,
+              colorPalette: 'green'
+            },
+            { label: 'Quá hạn', value: overdue, icon: <LuTriangleAlert />, colorPalette: 'red' }
+          ] as const
+        ).map(stat => (
+          <StatCard key={stat.label} {...stat} />
         ))}
       </Grid>
 
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, lg: 8.5 }}>
-          <Paper variant="outlined" sx={{ p: { xs: 1, sm: 2 }, borderRadius: 3 }}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
-              <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                Tháng {view.month + 1}, {view.year}
-              </Typography>
-              <Button
-                size="small"
-                variant="outlined"
-                color="success"
-                startIcon={<DoneAllIcon />}
-                disabled={monthOpenIssues.length === 0 || loading}
-                onClick={() => setConfirmAll(true)}
-              >
-                Giải quyết cả tháng ({monthOpenIssues.length})
-              </Button>
-              <Button size="small" variant="outlined" onClick={goToday}>
-                Hôm nay
-              </Button>
-              <IconButton size="small" onClick={() => shiftMonth(-1)} aria-label="Tháng trước">
-                <ChevronLeftIcon />
-              </IconButton>
-              <IconButton size="small" onClick={() => shiftMonth(1)} aria-label="Tháng sau">
-                <ChevronRightIcon />
-              </IconButton>
-            </Stack>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 1.5 }}>
+      <Grid templateColumns={{ base: '1fr', lg: 'minmax(0, 8.5fr) minmax(0, 3.5fr)' }} gap="4">
+        <GridItem minWidth="0">
+          <Panel
+            icon={<LuCalendarDays />}
+            title={`Tháng ${view.month + 1}, ${view.year}`}
+            bodyProps={{ px: { base: '2', sm: '6' } }}
+            actions={
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="green"
+                  disabled={monthOpenIssues.length === 0 || loading}
+                  onClick={() => setConfirmAll(true)}
+                >
+                  <LuCheckCheck /> Giải quyết cả tháng ({monthOpenIssues.length})
+                </Button>
+                <Button size="sm" variant="outline" onClick={goToday}>
+                  Hôm nay
+                </Button>
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  colorPalette="gray"
+                  onClick={() => shiftMonth(-1)}
+                  aria-label="Tháng trước"
+                >
+                  <LuChevronLeft />
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  colorPalette="gray"
+                  onClick={() => shiftMonth(1)}
+                  aria-label="Tháng sau"
+                >
+                  <LuChevronRight />
+                </IconButton>
+              </>
+            }
+          >
+            <Stack direction={{ base: 'column', sm: 'row' }} gap="3" mb="3">
               <ProjectSelect
                 projects={projects}
                 value={projectFilter}
@@ -307,25 +302,18 @@ export default function CalendarPage() {
                 label=""
                 placeholder="Tất cả dự án"
                 clearable
-                sx={{ width: { sm: 280 } }}
+                width={{ sm: '280px' }}
               />
-              <TextField
-                placeholder="Lọc theo mã, tiêu đề…"
-                value={keyword}
-                onChange={e => setKeyword(e.target.value)}
-                sx={{ flexGrow: 1 }}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon fontSize="small" />
-                      </InputAdornment>
-                    )
-                  }
-                }}
-              />
+              <InputGroup flexGrow={1} startElement={<LuSearch />}>
+                <Input
+                  bg="bg.panel"
+                  placeholder="Lọc theo mã, tiêu đề…"
+                  value={keyword}
+                  onChange={e => setKeyword(e.target.value)}
+                />
+              </InputGroup>
             </Stack>
-            <LinearProgress sx={{ mb: 1, visibility: loading ? 'visible' : 'hidden' }} />
+            <LoadingBar loading={loading} mb="2" />
             <MonthCalendar
               year={view.year}
               month={view.month}
@@ -334,174 +322,162 @@ export default function CalendarPage() {
               onSelectDay={selectDay}
               onIssueClick={openIssue}
             />
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            <Text textStyle="xs" color="fg.muted" mt="2">
               Việc hiển thị theo hạn xử lý; việc không có hạn hiển thị theo ngày tạo.
-            </Typography>
-          </Paper>
-        </Grid>
+            </Text>
+          </Panel>
+        </GridItem>
 
-        <Grid size={{ xs: 12, lg: 3.5 }}>
-          <Stack spacing={2}>
-            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
+        <GridItem minWidth="0">
+          <Stack gap="4">
+            <Panel
+              icon={<LuZap />}
+              title="Tạo việc nhanh"
+              description={`Giao cho ${me ? me.real_name || me.name : '…'}`}
+            >
               <QuickCreateForm
                 projects={projects}
                 me={me}
                 date={selected}
                 onDateChange={selectDay}
                 onCreated={id => {
-                  setToast({ severity: 'success', text: id ? `Đã tạo #${id}` : 'Đã tạo việc' })
+                  notify('success', id ? `Đã tạo #${id}` : 'Đã tạo việc')
                   refetch()
                 }}
               />
-            </Paper>
+            </Panel>
 
-            <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
-              <Stack
-                direction="row"
-                sx={{ px: 2.5, py: 1.75, alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <Typography variant="subtitle1">Việc ngày {formatDay(selected)}</Typography>
-                <Chip size="small" label={dayIssues.length} color="primary" variant="outlined" />
-              </Stack>
-              <Divider />
+            <Panel
+              icon={<LuListChecks />}
+              title={`Việc ngày ${formatDay(selected)}`}
+              actions={<Badge variant="outline">{dayIssues.length}</Badge>}
+              overflow="hidden"
+              bodyProps={{ p: '0' }}
+            >
+              <Separator />
               {dayIssues.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
+                <Text textStyle="sm" color="fg.muted" px="4" py="3">
                   Không có việc nào.
-                </Typography>
+                </Text>
               ) : (
-                <Stack divider={<Divider flexItem />}>
+                <Stack gap="0" separator={<StackSeparator />}>
                   {dayIssues.map(issue => (
-                    <Stack
-                      key={issue.id}
-                      direction="row"
-                      spacing={1.5}
-                      sx={{ px: 2.5, py: 1.5, alignItems: 'center' }}
-                    >
+                    <HStack key={issue.id} gap="3" px="5" py="3">
                       <Box
-                        sx={{
-                          width: 4,
-                          alignSelf: 'stretch',
-                          borderRadius: 2,
-                          bgcolor: statusColor(issue.status)
-                        }}
+                        width="4px"
+                        alignSelf="stretch"
+                        borderRadius="full"
+                        bg={statusColor(issue.status)}
                       />
-                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                      <Box minWidth="0" flexGrow={1}>
                         <Link
-                          component={NextLink}
-                          href={`/issues/${issue.id}`}
-                          underline="hover"
-                          color="text.primary"
-                          variant="body2"
-                          noWrap
-                          sx={{
-                            display: 'block',
-                            fontWeight: 600,
-                            textDecoration: isResolved(issue) ? 'line-through' : undefined
-                          }}
+                          asChild
+                          display="block"
+                          textStyle="sm"
+                          fontWeight="semibold"
+                          color="fg"
+                          truncate
+                          textDecoration={isResolved(issue) ? 'line-through' : undefined}
                         >
-                          {issue.summary}
+                          <NextLink href={`/issues/${issue.id}`}>{issue.summary}</NextLink>
                         </Link>
-                        <Typography variant="caption" color="text.secondary" noWrap component="div">
+                        <Text textStyle="xs" color="fg.muted" truncate>
                           #{issue.id} · {issue.status?.label ?? issue.status?.name}
-                        </Typography>
+                        </Text>
                       </Box>
-                      <Box sx={{ flexShrink: 0 }}>{renderResolve(issue)}</Box>
-                    </Stack>
+                      <Box flexShrink={0}>{renderResolve(issue)}</Box>
+                    </HStack>
                   ))}
                 </Stack>
               )}
-            </Paper>
+            </Panel>
           </Stack>
-        </Grid>
+        </GridItem>
       </Grid>
 
-      <Popover
+      <Popover.Root
         open={!!popover}
-        anchorEl={popover?.anchor}
-        onClose={() => setPopover(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        onOpenChange={e => !e.open && setPopover(null)}
+        positioning={{
+          placement: 'bottom-start',
+          getAnchorRect: () => popover?.anchor.getBoundingClientRect() ?? null
+        }}
       >
-        {popover && (
-          <Stack spacing={1.5} sx={{ p: 2, maxWidth: 360 }}>
-            <Typography variant="subtitle2">
-              #{popover.issue.id} {popover.issue.summary}
-            </Typography>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-              <StatusChip status={popover.issue.status} />
-              <Typography variant="caption" color="text.secondary">
-                {popover.issue.project?.name} ·{' '}
-                {popover.issue.priority?.label ?? popover.issue.priority?.name}
-              </Typography>
-            </Stack>
-            {popover.issue.description && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{
-                  whiteSpace: 'pre-wrap',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 4,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden'
-                }}
-              >
-                {popover.issue.description}
-              </Typography>
-            )}
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              {renderResolve(popover.issue)}
-              <Link
-                component={NextLink}
-                href={`/issues/${popover.issue.id}`}
-                variant="body2"
-                sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
-              >
-                Chi tiết <OpenInNewIcon fontSize="inherit" />
-              </Link>
-            </Stack>
-          </Stack>
-        )}
-      </Popover>
+        <Portal>
+          <Popover.Positioner>
+            <Popover.Content maxWidth="360px">
+              {popover && (
+                <Popover.Body p="4">
+                  <Stack gap="3">
+                    <Text textStyle="sm" fontWeight="semibold">
+                      #{popover.issue.id} {popover.issue.summary}
+                    </Text>
+                    <HStack gap="2" wrap="wrap">
+                      <StatusChip status={popover.issue.status} />
+                      <Text textStyle="xs" color="fg.muted">
+                        {popover.issue.project?.name} ·{' '}
+                        {popover.issue.priority?.label ?? popover.issue.priority?.name}
+                      </Text>
+                    </HStack>
+                    {popover.issue.description && (
+                      <Text textStyle="sm" color="fg.muted" whiteSpace="pre-wrap" lineClamp={4}>
+                        {popover.issue.description}
+                      </Text>
+                    )}
+                    <HStack gap="2">
+                      {renderResolve(popover.issue)}
+                      <Link asChild textStyle="sm" color="brand.fg">
+                        <NextLink href={`/issues/${popover.issue.id}`}>
+                          Chi tiết <LuExternalLink />
+                        </NextLink>
+                      </Link>
+                    </HStack>
+                  </Stack>
+                </Popover.Body>
+              )}
+            </Popover.Content>
+          </Popover.Positioner>
+        </Portal>
+      </Popover.Root>
 
-      <Dialog open={confirmAll} onClose={() => !bulkResolving && setConfirmAll(false)}>
-        <DialogTitle>Giải quyết tất cả việc trong tháng?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {monthOpenIssues.length} việc chưa xong của tháng {view.month + 1}/{view.year} sẽ được
-            chuyển sang trạng thái đã giải quyết
-            {(projectFilter || keyword.trim()) && ' (chỉ tính các việc đang được lọc)'}.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmAll(false)} disabled={bulkResolving}>
-            Hủy
-          </Button>
-          <Button
-            variant="contained"
-            color="success"
-            onClick={resolveMonth}
-            disabled={bulkResolving}
-            startIcon={bulkResolving ? <CircularProgress size={14} color="inherit" /> : <DoneAllIcon />}
-          >
-            Giải quyết tất cả
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={!!toast}
-        autoHideDuration={3000}
-        onClose={() => setToast(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      <Dialog.Root
+        open={confirmAll}
+        onOpenChange={e => !e.open && !bulkResolving && setConfirmAll(false)}
+        placement="center"
       >
-        <Alert
-          severity={toast?.severity ?? 'success'}
-          onClose={() => setToast(null)}
-          variant="filled"
-        >
-          {toast?.text}
-        </Alert>
-      </Snackbar>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Giải quyết tất cả việc trong tháng?</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Text color="fg.muted">
+                  {monthOpenIssues.length} việc chưa xong của tháng {view.month + 1}/{view.year} sẽ
+                  được chuyển sang trạng thái đã giải quyết
+                  {(projectFilter || keyword.trim()) && ' (chỉ tính các việc đang được lọc)'}.
+                </Text>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button
+                  variant="ghost"
+                  onClick={() => setConfirmAll(false)}
+                  disabled={bulkResolving}
+                >
+                  Hủy
+                </Button>
+                <Button colorPalette="green" onClick={resolveMonth} loading={bulkResolving}>
+                  <LuCheckCheck /> Giải quyết tất cả
+                </Button>
+              </Dialog.Footer>
+              <Dialog.CloseTrigger asChild disabled={bulkResolving}>
+                <CloseButton size="sm" />
+              </Dialog.CloseTrigger>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Stack>
   )
 }

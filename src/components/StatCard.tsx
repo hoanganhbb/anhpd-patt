@@ -1,43 +1,45 @@
-import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
-import Typography from '@mui/material/Typography'
+import { Card, Flex, HStack, Text, type ColorPalette } from '@chakra-ui/react'
 import type { ReactNode } from 'react'
 
 interface Props {
   label: string
   value: ReactNode
   icon: ReactNode
-  color: 'primary' | 'success' | 'warning' | 'error' | 'info' | 'secondary'
+  colorPalette: ColorPalette | 'brand'
+  // Secondary line under the value: share, context, period.
+  hint?: ReactNode
 }
 
-export default function StatCard({ label, value, icon, color }: Props) {
+export default function StatCard({ label, value, icon, colorPalette, hint }: Props) {
   return (
-    <Paper
-      variant="outlined"
-      sx={{ p: 2, borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.75 }}
-    >
-      <Box
-        sx={{
-          width: 42,
-          height: 42,
-          borderRadius: 2.5,
-          display: 'grid',
-          placeItems: 'center',
-          flexShrink: 0,
-          color: `${color}.main`,
-          bgcolor: t => t.alpha((t.vars || t).palette[color].main, 0.12)
-        }}
-      >
-        {icon}
-      </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="h5" sx={{ lineHeight: 1.1 }}>
+    <Card.Root variant="outline">
+      <Card.Body p="5" gap="3">
+        <HStack justify="space-between" gap="2">
+          <Text textStyle="sm" color="fg.muted" truncate>
+            {label}
+          </Text>
+          <Flex
+            colorPalette={colorPalette}
+            boxSize="30px"
+            borderRadius="l2"
+            align="center"
+            justify="center"
+            flexShrink={0}
+            color="colorPalette.fg"
+            bg="colorPalette.subtle"
+          >
+            {icon}
+          </Flex>
+        </HStack>
+        <Text fontSize="3xl" fontWeight="semibold" lineHeight="1" letterSpacing="-0.02em">
           {value}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" noWrap>
-          {label}
-        </Typography>
-      </Box>
-    </Paper>
+        </Text>
+        {hint && (
+          <Text textStyle="xs" color="fg.muted" mt="-1" truncate>
+            {hint}
+          </Text>
+        )}
+      </Card.Body>
+    </Card.Root>
   )
 }

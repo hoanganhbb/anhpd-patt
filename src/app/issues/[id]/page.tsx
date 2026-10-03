@@ -1,76 +1,107 @@
 'use client'
 
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import AttachFileIcon from '@mui/icons-material/AttachFile'
-import DeleteIcon from '@mui/icons-material/Delete'
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
-import PushPinIcon from '@mui/icons-material/PushPin'
-import SaveIcon from '@mui/icons-material/Save'
-import VisibilityIcon from '@mui/icons-material/Visibility'
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
-import Accordion from '@mui/material/Accordion'
-import AccordionDetails from '@mui/material/AccordionDetails'
-import AccordionSummary from '@mui/material/AccordionSummary'
-import Alert from '@mui/material/Alert'
-import Button from '@mui/material/Button'
-import Box from '@mui/material/Box'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import Chip from '@mui/material/Chip'
-import CircularProgress from '@mui/material/CircularProgress'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
-import Divider from '@mui/material/Divider'
-import Grid from '@mui/material/Grid'
-import List from '@mui/material/List'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemIcon from '@mui/material/ListItemIcon'
-import ListItemText from '@mui/material/ListItemText'
-import MenuItem from '@mui/material/MenuItem'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
-import Link from 'next/link'
+import {
+  Badge,
+  Box,
+  Button,
+  Card,
+  CloseButton,
+  Dialog,
+  EmptyState,
+  Grid,
+  Heading,
+  HStack,
+  IconButton,
+  Menu,
+  Portal,
+  Skeleton,
+  SkeletonText,
+  Stack,
+  Text,
+  Textarea
+} from '@chakra-ui/react'
+import NextLink from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
+import {
+  LuArrowLeft,
+  LuBellRing,
+  LuBookOpen,
+  LuCalendarDays,
+  LuChartNoAxesColumnIncreasing,
+  LuChevronRight,
+  LuCircleCheckBig,
+  LuEllipsis,
+  LuEye,
+  LuEyeOff,
+  LuFileQuestion,
+  LuFileText,
+  LuFlaskConical,
+  LuGlobe,
+  LuInfo,
+  LuLayers,
+  LuLightbulb,
+  LuLink,
+  LuLock,
+  LuPencil,
+  LuPin,
+  LuPinOff,
+  LuRefreshCw,
+  LuSave,
+  LuSettings,
+  LuTrash2,
+  LuUndo2,
+  LuWorkflow
+} from 'react-icons/lu'
 
+import IssueActivity from '@/components/issue/IssueActivity'
+import IssueAttachments from '@/components/issue/IssueAttachments'
 import PriorityBadge from '@/components/PriorityBadge'
-import StatusChip from '@/components/StatusChip'
+import StatusChip, { statusColor } from '@/components/StatusChip'
+import PersonLabel from '@/components/PersonLabel'
+import { Field } from '@/components/ui/field'
+import { DateRow, InfoRow } from '@/components/ui/info-row'
+import { PanelHeader } from '@/components/ui/panel'
+import { Pill } from '@/components/ui/pill'
+import { SelectField } from '@/components/ui/select-field'
+import { notify } from '@/components/ui/toaster'
 import UserAvatar from '@/components/UserAvatar'
-import { formatDateTime } from '@/lib/format'
+import UserSelect from '@/components/UserSelect'
+import { timeAgo } from '@/lib/format'
 import { getErrorMessage } from '@/services/httpService'
 import { toUserOptions, type UserOption } from '@/services/normalize'
 import RequestServices from '@/services/requestServices'
-import { PRIORITIES, STATUSES, type Attachment, type Issue } from '@/services/types'
+import {
+  PRIORITIES,
+  STATUSES,
+  type Attachment,
+  type CurrentUser,
+  type Issue,
+  type IssuePermission,
+  type Ref
+} from '@/services/types'
 
-type Feedback = { severity: 'success' | 'error'; text: string } | null
-
-const formatDate = (value?: string) => formatDateTime(value) || '—'
-
-const Field = ({ label, children }: { label: string; children: ReactNode }) => (
-  <Grid size={{ xs: 6, md: 3 }}>
-    <Typography
-      variant="caption"
-      color="text.secondary"
-      sx={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}
-    >
-      {label}
-    </Typography>
-    <Typography variant="body2" component="div" sx={{ mt: 0.5, fontWeight: 500 }}>
-      {children || '—'}
-    </Typography>
-  </Grid>
+const StatusDot = ({ id, label }: { id: number; label: string }) => (
+  <HStack as="span" gap="2">
+    <Box as="span" boxSize="8px" borderRadius="full" bg={statusColor({ id, name: '' })} />
+    {label}
+  </HStack>
 )
 
-const Person = ({ name }: { name?: string }) =>
-  name ? (
-    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-      <UserAvatar name={name} size={24} />
-      <span>{name}</span>
-    </Stack>
-  ) : null
+const STATUS_OPTIONS = STATUSES.map(s => ({
+  value: String(s.id),
+  label: s.label ?? s.name,
+  render: <StatusDot id={s.id} label={s.label ?? s.name} />
+}))
+const PRIORITY_OPTIONS = PRIORITIES.map(p => ({
+  value: p.name,
+  label: p.label ?? p.name,
+  render: <PriorityBadge priority={p} />
+}))
+
+const RESOLVED = 80
+
+const personName = (ref?: Ref) => ref?.real_name || ref?.name || ''
 
 const downloadBase64 = (file: { content: string; filename: string; content_type?: string }) => {
   const bytes = Uint8Array.from(atob(file.content), c => c.charCodeAt(0))
@@ -82,18 +113,65 @@ const downloadBase64 = (file: { content: string; filename: string; content_type?
   URL.revokeObjectURL(url)
 }
 
+// File -> base64 (without the "data:…;base64," prefix) for the Mantis files endpoint.
+const toBase64 = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '')
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+
+const editOf = (issue: Issue | null) => ({
+  status: String(issue?.status?.id ?? ''),
+  handler: String(issue?.handler?.id ?? ''),
+  priority: issue?.priority?.name ?? ''
+})
+
+const refText = (value?: Ref) => value?.label ?? value?.name
+
+function LoadingState() {
+  return (
+    <Stack gap="6">
+      <Skeleton height="14px" width="420px" maxWidth="100%" />
+      <Stack gap="3">
+        <Skeleton height="22px" width="80px" />
+        <Skeleton height="34px" width="70%" />
+        <Skeleton height="26px" width="45%" />
+      </Stack>
+      <Grid templateColumns={{ base: '1fr', lg: 'minmax(0, 1fr) 360px' }} gap="5">
+        <Card.Root variant="outline">
+          <Card.Body>
+            <SkeletonText noOfLines={6} gap="3" />
+          </Card.Body>
+        </Card.Root>
+        <Card.Root variant="outline">
+          <Card.Body>
+            <SkeletonText noOfLines={8} gap="4" />
+          </Card.Body>
+        </Card.Root>
+      </Grid>
+    </Stack>
+  )
+}
+
 export default function IssueDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [issue, setIssue] = useState<Issue | null>(null)
-  const [permission, setPermission] = useState<unknown>(null)
+  const [me, setMe] = useState<CurrentUser | null>(null)
+  const [permission, setPermission] = useState<IssuePermission | null>(null)
   const [handlers, setHandlers] = useState<UserOption[]>([])
-  const [edit, setEdit] = useState({ status: '', handler: '', priority: '' })
-  const [note, setNote] = useState('')
+  const [edit, setEdit] = useState(editOf(null))
+  const [description, setDescription] = useState<string | null>(null)
   const [remind, setRemind] = useState<{ open: boolean; text: string }>({ open: false, text: '' })
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
+  // Reference time for "overdue", fixed when the page opens.
+  const [now] = useState(() => Date.now())
 
   const load = useCallback(
     () =>
@@ -101,69 +179,133 @@ export default function IssueDetailPage() {
         .then(res => {
           const data = res.issues?.[0] ?? null
           setIssue(data)
-          setEdit({
-            status: String(data?.status?.id ?? ''),
-            handler: String(data?.handler?.id ?? ''),
-            priority: data?.priority?.name ?? ''
-          })
+          setEdit(editOf(data))
         })
-        .catch(err => setFeedback({ severity: 'error', text: getErrorMessage(err) }))
+        .catch(err => setLoadError(getErrorMessage(err)))
         .finally(() => setLoading(false)),
+    [id]
+  )
+
+  const loadPermission = useCallback(
+    () =>
+      RequestServices.getPermissionRequest(id)
+        .then(data => setPermission((data ?? {}) as IssuePermission))
+        .catch(() => setPermission({})),
     [id]
   )
 
   useEffect(() => {
     load()
-    RequestServices.getPermissionRequest(id)
-      .then(setPermission)
-      .catch(err => setPermission({ error: getErrorMessage(err) }))
+    loadPermission()
     RequestServices.getLstHandlerRequest(id)
       .then(data => setHandlers(toUserOptions(data)))
       .catch(() => setHandlers([]))
-  }, [id, load])
+    RequestServices.getCurrentUser()
+      .then(user => setMe(user?.id ? user : null))
+      .catch(() => setMe(null))
+  }, [id, load, loadPermission])
+
+  // Unknown (still loading or endpoint failed) counts as allowed; the API has the final say.
+  const can = (key: keyof IssuePermission) => permission?.[key] !== false
 
   const run = async (action: () => Promise<unknown>, success: string) => {
     setBusy(true)
-    setFeedback(null)
     try {
       await action()
-      setFeedback({ severity: 'success', text: success })
+      notify('success', success)
       await load()
+      return true
     } catch (err) {
-      setFeedback({ severity: 'error', text: getErrorMessage(err) })
+      notify('error', getErrorMessage(err))
+      return false
     } finally {
       setBusy(false)
     }
   }
 
+  if (loading) return <LoadingState />
+  if (!issue)
+    return (
+      <EmptyState.Root>
+        <EmptyState.Content>
+          <EmptyState.Indicator>
+            <LuFileQuestion />
+          </EmptyState.Indicator>
+          <Stack textAlign="center" gap="1">
+            <EmptyState.Title>Không tải được công việc #{id}</EmptyState.Title>
+            <EmptyState.Description>
+              {loadError || 'Công việc không tồn tại.'}
+            </EmptyState.Description>
+          </Stack>
+          <Button variant="outline" asChild>
+            <NextLink href="/">
+              <LuArrowLeft /> Về danh sách
+            </NextLink>
+          </Button>
+        </EmptyState.Content>
+      </EmptyState.Root>
+    )
+
+  const original = editOf(issue)
+  const changed = {
+    status: edit.status !== original.status,
+    handler: edit.handler !== original.handler,
+    priority: edit.priority !== original.priority
+  }
+  const dirty = changed.status || changed.handler || changed.priority
+
+  const handlerOptions =
+    issue.handler && !handlers.some(h => h.id === issue.handler?.id)
+      ? [
+          {
+            id: issue.handler.id,
+            name: issue.handler.name,
+            label: personName(issue.handler)
+          },
+          ...handlers
+        ]
+      : handlers
+
+  const statusId = issue.status?.id ?? 0
+  const isResolved = statusId >= RESOLVED
+  const isMonitoring = permission?.can_unmonitor === true
+  const canMonitorToggle = isMonitoring || permission?.can_monitor !== false
+  const canSticky = issue.sticky ? can('can_unsticky') : can('can_sticky')
+  const overdue = !isResolved && !!issue.due_date && new Date(issue.due_date).getTime() < now
+  const reporterName = personName(issue.reporter)
+  const readOnly = !can('can_update') && !can('can_assign') && !can('can_change_status')
+
+  // Only send the fields that changed, so a missing right on one field doesn't block the rest.
   const save = () =>
     run(
       () =>
         RequestServices.updateRequest({
           id,
           data: {
-            status: edit.status ? { id: Number(edit.status) } : undefined,
-            handler: edit.handler ? { id: Number(edit.handler) } : undefined,
-            priority: edit.priority ? { name: edit.priority } : undefined
+            ...(changed.status && edit.status ? { status: { id: Number(edit.status) } } : {}),
+            ...(changed.handler ? { handler: { id: Number(edit.handler) || 0 } } : {}),
+            ...(changed.priority && edit.priority ? { priority: { name: edit.priority } } : {})
           }
         }),
       'Đã cập nhật công việc'
     )
 
-  const addNote = () =>
-    run(async () => {
-      await RequestServices.addNoteRequest({
-        id,
-        data: { text: note, view_state: { name: 'public' } }
-      })
-      setNote('')
-    }, 'Đã thêm ghi chú')
+  const saveDescription = async () => {
+    if (description === null) return
+    const ok = await run(
+      () => RequestServices.updateRequest({ id, data: { description } }),
+      'Đã cập nhật mô tả'
+    )
+    if (ok) setDescription(null)
+  }
 
-  const isMonitoring = Boolean(
-    permission && typeof permission === 'object' && 'is_monitoring' in permission
-      ? (permission as { is_monitoring: unknown }).is_monitoring
-      : false
-  )
+  const resolve = () => run(() => RequestServices.resolveRequest(id), 'Đã giải quyết công việc')
+
+  const addNote = (text: string) =>
+    run(
+      () => RequestServices.addNoteRequest({ id, data: { text, view_state: { name: 'public' } } }),
+      'Đã thêm ghi chú'
+    )
 
   const toggleMonitor = () =>
     run(
@@ -172,17 +314,13 @@ export default function IssueDetailPage() {
           ? RequestServices.deleteMonitorRequest(id)
           : RequestServices.addMonitorRequest(id),
       isMonitoring ? 'Đã bỏ theo dõi' : 'Đã theo dõi'
-    ).then(() =>
-      RequestServices.getPermissionRequest(id)
-        .then(setPermission)
-        .catch(() => {})
-    )
+    ).then(loadPermission)
 
   const toggleSticky = () =>
     run(
-      () => RequestServices.toggleStickRequest({ id: Number(id), sticky: !issue?.sticky }),
-      issue?.sticky ? 'Đã bỏ ghim' : 'Đã ghim'
-    )
+      () => RequestServices.toggleStickRequest({ id: Number(id), sticky: !issue.sticky }),
+      issue.sticky ? 'Đã bỏ ghim' : 'Đã ghim'
+    ).then(loadPermission)
 
   const sendRemind = () =>
     run(async () => {
@@ -197,8 +335,17 @@ export default function IssueDetailPage() {
       await RequestServices.deleteRequest(id)
       router.push('/')
     } catch (err) {
-      setFeedback({ severity: 'error', text: getErrorMessage(err) })
+      notify('error', getErrorMessage(err))
       setBusy(false)
+    }
+  }
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      notify('success', 'Đã sao chép liên kết')
+    } catch {
+      notify('error', 'Không sao chép được liên kết')
     }
   }
 
@@ -207,303 +354,455 @@ export default function IssueDetailPage() {
       const res = (await RequestServices.getDetailIssueFiles({
         idRequest: id,
         idFile: file.id
-      })) as {
-        files?: { content: string; filename: string; content_type?: string }[]
-      }
+      })) as { files?: { content: string; filename: string; content_type?: string }[] }
       const content = res.files?.[0]
       if (!content?.content) throw new Error('Tệp không có nội dung')
       downloadBase64(content)
     } catch (err) {
-      setFeedback({ severity: 'error', text: getErrorMessage(err) })
+      notify('error', getErrorMessage(err))
     }
   }
 
-  if (loading) return <CircularProgress />
-  if (!issue)
-    return (
-      <Stack spacing={2}>
-        {feedback && <Alert severity={feedback.severity}>{feedback.text}</Alert>}
-        <Button component={Link} href="/" startIcon={<ArrowBackIcon />} sx={{ alignSelf: 'start' }}>
-          Quay lại
-        </Button>
-      </Stack>
-    )
+  const upload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const picked = [...(e.target.files ?? [])]
+    e.target.value = ''
+    if (!picked.length) return
+    setUploading(true)
+    try {
+      const files = await Promise.all(
+        picked.map(async f => ({ name: f.name, content: await toBase64(f) }))
+      )
+      await RequestServices.addFilesRequest({ id, files })
+      notify('success', `Đã tải lên ${files.length} tệp`)
+      await load()
+    } catch (err) {
+      notify('error', getErrorMessage(err))
+    } finally {
+      setUploading(false)
+    }
+  }
+  const pickFiles = () => fileInput.current?.click()
 
-  const handlerOptions =
-    issue.handler && !handlers.some(h => h.id === issue.handler?.id)
-      ? [
-          {
-            id: issue.handler.id,
-            name: issue.handler.name,
-            label: issue.handler.real_name || issue.handler.name
-          },
-          ...handlers
-        ]
-      : handlers
+  const closeRemind = () => setRemind({ open: false, text: '' })
 
   return (
-    <Stack spacing={2}>
-      <Box>
-        <Button
-          component={Link}
-          href="/"
-          size="small"
-          startIcon={<ArrowBackIcon />}
-          sx={{ mb: 1, ml: -1, color: 'text.secondary' }}
-        >
-          Danh sách công việc
-        </Button>
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{ alignItems: 'center', flexWrap: 'wrap' }}
-          useFlexGap
-        >
-          <Typography
-            sx={{ fontFamily: 'monospace', fontWeight: 700, color: 'primary.main', fontSize: 18 }}
-          >
-            #{issue.id}
-          </Typography>
-          <StatusChip status={issue.status} />
-          {issue.sticky && (
-            <Chip size="small" color="warning" icon={<PushPinIcon />} label="Đã ghim" />
-          )}
-        </Stack>
-        <Typography variant="h4" component="h1" sx={{ mt: 0.5, fontSize: { xs: 22, md: 28 } }}>
-          {issue.summary}
-        </Typography>
-      </Box>
+    <Stack gap="5">
+      <input ref={fileInput} type="file" multiple hidden onChange={upload} />
 
-      <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
-        <Button
-          variant="outlined"
-          startIcon={isMonitoring ? <VisibilityOffIcon /> : <VisibilityIcon />}
-          onClick={toggleMonitor}
-          disabled={busy}
-        >
-          {isMonitoring ? 'Bỏ theo dõi' : 'Theo dõi'}
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<PushPinIcon />}
-          onClick={toggleSticky}
-          disabled={busy}
-        >
-          {issue.sticky ? 'Bỏ ghim' : 'Ghim'}
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<NotificationsActiveIcon />}
-          onClick={() => setRemind({ open: true, text: '' })}
-          disabled={busy}
-        >
-          Nhắc việc
-        </Button>
-        <Button
-          color="error"
-          variant="outlined"
-          startIcon={<DeleteIcon />}
-          onClick={remove}
-          disabled={busy}
-        >
-          Xoá
-        </Button>
+      {/* Breadcrumb */}
+      <HStack gap="2" textStyle="sm" color="fg.muted" wrap="wrap">
+        <NextLink href="/">
+          <HStack gap="2" _hover={{ color: 'fg' }}>
+            <LuArrowLeft /> Trang chủ
+          </HStack>
+        </NextLink>
+        <LuChevronRight />
+        <NextLink href="/">
+          <Text _hover={{ color: 'fg' }}>Danh sách công việc</Text>
+        </NextLink>
+        {issue.project?.name && (
+          <>
+            <LuChevronRight />
+            <Text>{issue.project.name}</Text>
+          </>
+        )}
+        {issue.category?.name && (
+          <>
+            <LuChevronRight />
+            <Text color="fg" fontWeight="medium">
+              {issue.category.name}
+            </Text>
+          </>
+        )}
+      </HStack>
+
+      {/* Title */}
+      <Stack direction={{ base: 'column', md: 'row' }} gap="4" justify="space-between">
+        <Box minWidth="0">
+          <HStack gap="2" mb="2.5">
+            <Badge variant="surface" colorPalette="gray" fontFamily="mono" fontSize="13px" px="2">
+              #{issue.id}
+            </Badge>
+            {issue.sticky && (
+              <Badge colorPalette="orange" variant="subtle">
+                <LuPin /> Đã ghim
+              </Badge>
+            )}
+          </HStack>
+          <Box borderLeftWidth="4px" borderColor="brand.solid" ps="4" ms={{ md: '-5' }}>
+            <Heading
+              as="h1"
+              fontSize={{ base: '22px', md: '26px' }}
+              fontWeight="bold"
+              letterSpacing="-0.015em"
+              lineHeight="1.3"
+            >
+              {issue.summary}
+            </Heading>
+            <HStack gap="2" mt="3" wrap="wrap" textStyle="sm" color="fg.muted">
+              <StatusChip status={issue.status} />
+              {issue.priority && (
+                <Pill>
+                  <PriorityBadge priority={issue.priority} />
+                </Pill>
+              )}
+              {issue.severity && <Pill>Mức độ: {refText(issue.severity)}</Pill>}
+              <Box color="fg.subtle">·</Box>
+              <HStack gap="2">
+                <UserAvatar name={reporterName} size={26} />
+                <Text>
+                  <Text as="span" color="fg" fontWeight="semibold">
+                    {reporterName}
+                  </Text>{' '}
+                  tạo {timeAgo(issue.created_at)}
+                </Text>
+              </HStack>
+            </HStack>
+          </Box>
+        </Box>
+
+        <HStack gap="2" flexShrink={0} align="flex-start">
+          {!isResolved && can('can_change_status') && (
+            <Button colorPalette="green" onClick={resolve} disabled={busy}>
+              <LuCircleCheckBig /> Giải quyết
+            </Button>
+          )}
+          {canMonitorToggle && (
+            <Button variant="outline" color="brand.fg" onClick={toggleMonitor} disabled={busy}>
+              {isMonitoring ? <LuEyeOff /> : <LuEye />}
+              {isMonitoring ? 'Bỏ theo dõi' : 'Theo dõi'}
+            </Button>
+          )}
+          <Menu.Root positioning={{ placement: 'bottom-end' }}>
+            <Menu.Trigger asChild>
+              <IconButton variant="outline" aria-label="Thao tác khác" disabled={busy}>
+                <LuEllipsis />
+              </IconButton>
+            </Menu.Trigger>
+            <Portal>
+              <Menu.Positioner>
+                <Menu.Content minWidth="200px">
+                  <Menu.Item value="copy" onClick={copyLink}>
+                    <LuLink /> Sao chép liên kết
+                  </Menu.Item>
+                  {can('can_remind') && (
+                    <Menu.Item value="remind" onClick={() => setRemind({ open: true, text: '' })}>
+                      <LuBellRing /> Nhắc việc
+                    </Menu.Item>
+                  )}
+                  {canSticky && (
+                    <Menu.Item value="sticky" onClick={toggleSticky}>
+                      {issue.sticky ? <LuPinOff /> : <LuPin />}
+                      {issue.sticky ? 'Bỏ ghim' : 'Ghim lên đầu'}
+                    </Menu.Item>
+                  )}
+                  {can('can_delete') && (
+                    <>
+                      <Menu.Separator />
+                      <Menu.Item
+                        value="delete"
+                        color="fg.error"
+                        _hover={{ bg: 'bg.error', color: 'fg.error' }}
+                        onClick={remove}
+                      >
+                        <LuTrash2 /> Xoá công việc
+                      </Menu.Item>
+                    </>
+                  )}
+                </Menu.Content>
+              </Menu.Positioner>
+            </Portal>
+          </Menu.Root>
+        </HStack>
       </Stack>
 
-      {feedback && <Alert severity={feedback.severity}>{feedback.text}</Alert>}
-
-      <Card variant="outlined">
-        <CardContent>
-          <Grid container spacing={2}>
-            <Field label="Dự án">{issue.project?.name}</Field>
-            <Field label="Danh mục">{issue.category?.name}</Field>
-            <Field label="Trạng thái">
-              <StatusChip status={issue.status} />
-            </Field>
-            <Field label="Ưu tiên">
-              <PriorityBadge priority={issue.priority} />
-            </Field>
-            <Field label="Người báo cáo">
-              <Person name={issue.reporter?.real_name || issue.reporter?.name} />
-            </Field>
-            <Field label="Người xử lý">
-              <Person name={issue.handler?.real_name || issue.handler?.name} />
-            </Field>
-            <Field label="Ngày tạo">{formatDate(issue.created_at)}</Field>
-            <Field label="Cập nhật">{formatDate(issue.updated_at)}</Field>
-          </Grid>
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="subtitle2" gutterBottom>
-            Mô tả
-          </Typography>
-          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-            {issue.description}
-          </Typography>
-          {issue.additional_information && (
-            <>
-              <Typography variant="subtitle2" sx={{ mt: 2 }} gutterBottom>
-                Thông tin thêm
-              </Typography>
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {issue.additional_information}
-              </Typography>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card variant="outlined">
-        <CardContent>
-          <Typography variant="subtitle1" gutterBottom>
-            Cập nhật
-          </Typography>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-            <TextField
-              select
-              size="small"
-              label="Trạng thái"
-              value={edit.status}
-              onChange={e => setEdit(s => ({ ...s, status: e.target.value }))}
-              sx={{ minWidth: 180 }}
-            >
-              {STATUSES.map(s => (
-                <MenuItem key={s.id} value={String(s.id)}>
-                  {s.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              size="small"
-              label="Người xử lý"
-              value={edit.handler}
-              onChange={e => setEdit(s => ({ ...s, handler: e.target.value }))}
-              sx={{ minWidth: 240 }}
-            >
-              <MenuItem value="">(Không đổi)</MenuItem>
-              {handlerOptions.map(h => (
-                <MenuItem key={h.id} value={String(h.id)}>
-                  {h.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              size="small"
-              label="Ưu tiên"
-              value={edit.priority}
-              onChange={e => setEdit(s => ({ ...s, priority: e.target.value }))}
-              sx={{ minWidth: 160 }}
-            >
-              {PRIORITIES.map(p => (
-                <MenuItem key={p.id} value={p.name}>
-                  {p.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Button variant="contained" startIcon={<SaveIcon />} onClick={save} disabled={busy}>
-              Lưu
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      {!!issue.attachments?.length && (
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="subtitle1">Tệp đính kèm</Typography>
-            <List dense>
-              {issue.attachments.map(file => (
-                <ListItemButton key={file.id} onClick={() => download(file)}>
-                  <ListItemIcon>
-                    <AttachFileIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={file.filename}
-                    secondary={`${(file.size / 1024).toFixed(1)} KB`}
-                  />
-                </ListItemButton>
-              ))}
-            </List>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card variant="outlined">
-        <CardContent>
-          <Typography variant="subtitle1" gutterBottom>
-            Ghi chú ({issue.notes?.length ?? 0})
-          </Typography>
-          <Stack spacing={2} divider={<Divider flexItem />}>
-            {issue.notes?.map(n => (
-              <Stack key={n.id} direction="row" spacing={1.5}>
-                <UserAvatar name={n.reporter?.real_name || n.reporter?.name} size={32} />
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {n.reporter?.real_name || n.reporter?.name}{' '}
-                    <Typography component="span" variant="caption" color="text.secondary">
-                      · {formatDate(n.created_at)}
-                    </Typography>
-                  </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 0.25 }}>
-                    {n.text}
-                  </Typography>
-                </Box>
-              </Stack>
-            ))}
-          </Stack>
-          <Stack spacing={1} sx={{ mt: 2 }}>
-            <TextField
-              label="Thêm ghi chú"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              multiline
-              minRows={3}
+      <Grid
+        templateColumns={{ base: '1fr', lg: 'minmax(0, 1fr) 360px' }}
+        gap="5"
+        alignItems="start"
+      >
+        {/* Main column */}
+        <Stack gap="5" minWidth="0">
+          <Card.Root variant="outline">
+            <PanelHeader
+              icon={<LuFileText />}
+              title="Mô tả công việc"
+              actions={
+                <>
+                  {can('can_update') && description === null && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      colorPalette="gray"
+                      onClick={() => setDescription(issue.description ?? '')}
+                    >
+                      <LuPencil /> Chỉnh sửa
+                    </Button>
+                  )}
+                </>
+              }
             />
-            <Button
-              variant="contained"
-              onClick={addNote}
-              disabled={busy || !note.trim()}
-              sx={{ alignSelf: 'start' }}
-            >
-              Gửi ghi chú
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
+            <Card.Body pt="3" gap="5">
+              {description !== null ? (
+                <Stack gap="3">
+                  <Textarea
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    rows={6}
+                    autoresize
+                    autoFocus
+                    bg="bg.panel"
+                  />
+                  <HStack justify="flex-end" gap="2">
+                    <Button variant="ghost" onClick={() => setDescription(null)} disabled={busy}>
+                      Huỷ
+                    </Button>
+                    <Button onClick={saveDescription} disabled={busy || !description.trim()}>
+                      <LuSave /> Lưu mô tả
+                    </Button>
+                  </HStack>
+                </Stack>
+              ) : issue.description ? (
+                <Text lineHeight="1.6" whiteSpace="pre-wrap" wordBreak="break-word">
+                  {issue.description}
+                </Text>
+              ) : (
+                <Text color="fg.subtle">Không có mô tả.</Text>
+              )}
+              {issue.steps_to_reproduce && (
+                <Box>
+                  <Text fontWeight="semibold" mb="1">
+                    Các bước tái hiện
+                  </Text>
+                  <Text lineHeight="1.6" whiteSpace="pre-wrap" wordBreak="break-word">
+                    {issue.steps_to_reproduce}
+                  </Text>
+                </Box>
+              )}
+              {issue.additional_information && (
+                <Box>
+                  <Text fontWeight="semibold" mb="1">
+                    Thông tin thêm
+                  </Text>
+                  <Text lineHeight="1.6" whiteSpace="pre-wrap" wordBreak="break-word">
+                    {issue.additional_information}
+                  </Text>
+                </Box>
+              )}
+            </Card.Body>
+          </Card.Root>
 
-      <Accordion variant="outlined" disableGutters>
-        <AccordionSummary>
-          <Typography variant="body2">Quyền trên công việc (dữ liệu thô)</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <pre style={{ margin: 0, fontSize: 12, overflowX: 'auto' }}>
-            {JSON.stringify(permission, null, 2)}
-          </pre>
-        </AccordionDetails>
-      </Accordion>
-
-      <Dialog open={remind.open} onClose={() => setRemind({ open: false, text: '' })} fullWidth>
-        <DialogTitle>Nhắc việc #{issue.id}</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            label="Nội dung nhắc"
-            value={remind.text}
-            onChange={e => setRemind(r => ({ ...r, text: e.target.value }))}
-            multiline
-            minRows={3}
-            fullWidth
-            sx={{ mt: 1 }}
+          <IssueAttachments
+            files={issue.attachments ?? []}
+            uploading={uploading}
+            onDownload={download}
+            onAdd={can('can_update') ? pickFiles : undefined}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRemind({ open: false, text: '' })}>Huỷ</Button>
-          <Button variant="contained" onClick={sendRemind} disabled={busy}>
-            Gửi
-          </Button>
-        </DialogActions>
-      </Dialog>
+
+          <IssueActivity
+            notes={issue.notes ?? []}
+            history={issue.history ?? []}
+            me={me ? me.real_name || me.name : undefined}
+            busy={busy}
+            onAddNote={addNote}
+            onAttach={can('can_update') ? pickFiles : undefined}
+          />
+        </Stack>
+
+        {/* Side column */}
+        <Stack gap="5" position={{ lg: 'sticky' }} top={{ lg: '84px' }}>
+          <Card.Root variant="outline">
+            <PanelHeader
+              icon={<LuWorkflow />}
+              title="Xử lý công việc"
+              actions={
+                <>
+                  <Menu.Root positioning={{ placement: 'bottom-end' }}>
+                    <Menu.Trigger asChild>
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="gray"
+                        aria-label="Tuỳ chọn"
+                      >
+                        <LuSettings />
+                      </IconButton>
+                    </Menu.Trigger>
+                    <Portal>
+                      <Menu.Positioner>
+                        <Menu.Content>
+                          <Menu.Item
+                            value="reset"
+                            disabled={!dirty}
+                            onClick={() => setEdit(original)}
+                          >
+                            <LuUndo2 /> Hoàn tác thay đổi
+                          </Menu.Item>
+                          <Menu.Item value="reload" onClick={() => void load()}>
+                            <LuRefreshCw /> Tải lại dữ liệu
+                          </Menu.Item>
+                        </Menu.Content>
+                      </Menu.Positioner>
+                    </Portal>
+                  </Menu.Root>
+                </>
+              }
+            />
+            <Card.Body pt="3" gap="4">
+              <SelectField
+                label="Trạng thái"
+                options={STATUS_OPTIONS}
+                value={edit.status}
+                onChange={status => setEdit(s => ({ ...s, status }))}
+                disabled={!can('can_change_status')}
+              />
+              <UserSelect
+                label="Người xử lý"
+                users={handlerOptions}
+                value={edit.handler}
+                onChange={handler => setEdit(s => ({ ...s, handler }))}
+                placeholder="Chưa giao · tìm người xử lý…"
+                disabled={!can('can_assign')}
+              />
+              <SelectField
+                label="Ưu tiên"
+                options={PRIORITY_OPTIONS}
+                value={edit.priority}
+                onChange={priority => setEdit(s => ({ ...s, priority }))}
+                disabled={!can('can_update')}
+              />
+              {readOnly ? (
+                <HStack
+                  gap="2"
+                  px="3"
+                  py="2.5"
+                  borderRadius="l2"
+                  bg="bg.muted"
+                  textStyle="sm"
+                  color="fg.muted"
+                >
+                  <LuLock />
+                  Bạn chỉ có quyền xem ở trạng thái hiện tại của phiếu.
+                </HStack>
+              ) : (
+                <Button size="lg" onClick={save} disabled={busy || !dirty}>
+                  <LuSave /> Lưu thay đổi
+                </Button>
+              )}
+            </Card.Body>
+          </Card.Root>
+
+          <Card.Root variant="outline">
+            <PanelHeader icon={<LuInfo />} title="Thông tin chi tiết" />
+            <Card.Body pt="3" gap="3.5">
+              <InfoRow label="Dự án" icon={<LuBookOpen />}>
+                {issue.project?.name ?? '—'}
+              </InfoRow>
+              <InfoRow label="Danh mục" icon={<LuLayers />}>
+                {refText(issue.category) ?? '—'}
+              </InfoRow>
+              <InfoRow label="Người báo cáo">
+                <PersonLabel person={issue.reporter} />
+              </InfoRow>
+              <InfoRow label="Người xử lý">
+                <PersonLabel person={issue.handler} fallback="Chưa giao" />
+              </InfoRow>
+              <InfoRow
+                label="Mức độ"
+                icon={
+                  <Box color="red.fg">
+                    <LuChartNoAxesColumnIncreasing />
+                  </Box>
+                }
+              >
+                {refText(issue.severity) ?? '—'}
+              </InfoRow>
+              <InfoRow label="Tái hiện" icon={<LuFlaskConical />}>
+                {refText(issue.reproducibility) ?? '—'}
+              </InfoRow>
+              <InfoRow label="Hướng giải quyết" icon={<LuLightbulb />}>
+                {refText(issue.resolution) ?? '—'}
+              </InfoRow>
+              <InfoRow label="Phạm vi" icon={<LuGlobe />}>
+                {refText(issue.view_state) ?? '—'}
+              </InfoRow>
+              {!!issue.monitors?.length && (
+                <InfoRow label="Người theo dõi" icon={<LuEye />}>
+                  <HStack gap="1" wrap="wrap">
+                    {issue.monitors.map(m => (
+                      <UserAvatar key={m.id} name={personName(m)} size={24} />
+                    ))}
+                  </HStack>
+                </InfoRow>
+              )}
+              {!!issue.tags?.length && (
+                <InfoRow label="Thẻ">
+                  <HStack gap="1.5" wrap="wrap">
+                    {issue.tags.map(t => (
+                      <Badge key={t.id} variant="subtle" colorPalette="gray">
+                        {t.name}
+                      </Badge>
+                    ))}
+                  </HStack>
+                </InfoRow>
+              )}
+            </Card.Body>
+          </Card.Root>
+
+          <Card.Root variant="outline">
+            <PanelHeader icon={<LuCalendarDays />} title="Thời gian" />
+            <Card.Body pt="3" gap="3">
+              <DateRow label="Hạn xử lý" value={issue.due_date} danger={overdue} />
+              <DateRow label="Bắt đầu" value={issue.date_start} />
+              <DateRow label="Kết thúc" value={issue.date_end} />
+              <DateRow label="Ngày tạo" value={issue.created_at} />
+              <DateRow label="Cập nhật" value={issue.updated_at} />
+            </Card.Body>
+          </Card.Root>
+        </Stack>
+      </Grid>
+
+      <Dialog.Root
+        open={remind.open}
+        onOpenChange={e => !e.open && closeRemind()}
+        placement="center"
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Nhắc việc #{issue.id}</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Text textStyle="sm" color="fg.muted" mb="3">
+                  Gửi nhắc nhở tới {personName(issue.handler) || 'người xử lý'} về công việc này.
+                </Text>
+                <Field label="Nội dung nhắc">
+                  <Textarea
+                    autoFocus
+                    value={remind.text}
+                    onChange={e => setRemind(r => ({ ...r, text: e.target.value }))}
+                    rows={3}
+                    autoresize
+                  />
+                </Field>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button variant="ghost" onClick={closeRemind}>
+                  Huỷ
+                </Button>
+                <Button onClick={sendRemind} disabled={busy}>
+                  <LuBellRing /> Gửi nhắc việc
+                </Button>
+              </Dialog.Footer>
+              <Dialog.CloseTrigger asChild>
+                <CloseButton size="sm" />
+              </Dialog.CloseTrigger>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Stack>
   )
 }

@@ -1,4 +1,8 @@
-import axios, { type AxiosInstance, type RawAxiosRequestHeaders } from 'axios'
+import axios, {
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type RawAxiosRequestHeaders
+} from 'axios'
 
 // All calls go through the Next.js proxy, which attaches the API-KEY from data/token.txt.
 export const PROXY_PREFIX = '/api/proxy/'
@@ -8,8 +12,8 @@ const stripLeadingSlash = (url: string) => url.replace(/^\/+/, '')
 export class HttpService {
   constructor(private readonly client: AxiosInstance) {}
 
-  get = <T = unknown>(url: string) =>
-    this.client.get<T>(stripLeadingSlash(url)).then(res => res.data)
+  get = <T = unknown>(url: string, config?: AxiosRequestConfig) =>
+    this.client.get<T>(stripLeadingSlash(url), config).then(res => res.data)
 
   post = <T = unknown>(url: string, data?: unknown, headers?: RawAxiosRequestHeaders) =>
     this.client.post<T>(stripLeadingSlash(url), data, { headers }).then(res => res.data)

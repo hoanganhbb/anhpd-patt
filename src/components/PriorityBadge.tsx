@@ -1,5 +1,5 @@
-import FlagIcon from '@mui/icons-material/Flag'
-import Box from '@mui/material/Box'
+import { HStack } from '@chakra-ui/react'
+import { LuFlag } from 'react-icons/lu'
 
 import type { Ref } from '@/services/types'
 
@@ -16,18 +16,9 @@ export default function PriorityBadge({ priority }: { priority?: Ref }) {
   if (!priority) return null
   const color = COLORS[priority.name] ?? COLORS.none
   return (
-    <Box
-      component="span"
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 0.5,
-        fontSize: 13,
-        whiteSpace: 'nowrap'
-      }}
-    >
-      <FlagIcon sx={{ fontSize: 16, color }} />
+    <HStack as="span" display="inline-flex" gap="1" fontSize="13px" whiteSpace="nowrap">
+      <LuFlag size={15} color={color} fill={color} />
       {priority.label ?? priority.name}
-    </Box>
+    </HStack>
   )
 }
